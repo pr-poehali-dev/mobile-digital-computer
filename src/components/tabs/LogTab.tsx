@@ -29,6 +29,12 @@ const getLogTypeConfig = (type: ActivityLog['type']) => {
       return { label: 'ТРЕВОГА', icon: 'AlertTriangle', color: 'bg-red-100 text-red-700 border-red-500' };
     case 'panic_reset':
       return { label: 'Сброс тревоги', icon: 'XCircle', color: 'bg-gray-100 text-gray-700' };
+    case 'signal100_activated':
+      return { label: 'СИГНАЛ 100', icon: 'Radio', color: 'bg-yellow-100 text-yellow-700 border-yellow-500' };
+    case 'signal100_reset':
+      return { label: 'Отмена сигнала 100', icon: 'RadioOff', color: 'bg-gray-100 text-gray-700' };
+    default:
+      return { label: 'Событие', icon: 'Info', color: 'bg-gray-100 text-gray-700' };
   }
 };
 

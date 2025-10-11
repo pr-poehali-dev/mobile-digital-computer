@@ -30,6 +30,11 @@ const getLogIcon = (type: ActivityLog['type']) => {
     case 'crew_status': return 'RefreshCw';
     case 'call_assigned': return 'Bell';
     case 'call_completed': return 'CheckCircle2';
+    case 'panic_activated': return 'AlertTriangle';
+    case 'panic_reset': return 'XCircle';
+    case 'signal100_activated': return 'Radio';
+    case 'signal100_reset': return 'RadioOff';
+    default: return 'Info';
   }
 };
 
