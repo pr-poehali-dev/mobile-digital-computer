@@ -289,9 +289,24 @@ export const getOnlineUsers = (): User[] => {
   const stored = localStorage.getItem(onlineKey);
   if (stored) {
     try {
-      const users = JSON.parse(stored);
-      console.log('getOnlineUsers - raw data:', users);
-      return users;
+      const users = JSON.parse(stored) as OnlineUserWithTimestamp[];
+      const now = Date.now();
+      const timeout = 15000; // 15 секунд
+      
+      // Фильтруем активных пользователей (с heartbeat не старше 15 сек)
+      const activeUsers = users.filter(u => {
+        if (!u.lastHeartbeat) return false;
+        return (now - u.lastHeartbeat) < timeout;
+      });
+      
+      // Если список изменился, сохраняем обновленный
+      if (activeUsers.length !== users.length) {
+        localStorage.setItem(onlineKey, JSON.stringify(activeUsers));
+        console.log('Removed inactive users. Active:', activeUsers.length);
+      }
+      
+      console.log('getOnlineUsers - raw data:', activeUsers);
+      return activeUsers;
     } catch {
       return [];
     }
@@ -304,23 +319,35 @@ const broadcastChannel = typeof BroadcastChannel !== 'undefined'
   ? new BroadcastChannel('mdc_sync') 
   : null;
 
+interface OnlineUserWithTimestamp extends User {
+  lastHeartbeat?: number;
+}
+
 export const addOnlineUser = (user: User): void => {
   const onlineKey = 'mdc_online_users';
-  const online = getOnlineUsers();
+  const online = getOnlineUsers() as OnlineUserWithTimestamp[];
   console.log('addOnlineUser called with:', user);
   console.log('Current online users:', online);
-  const exists = online.find(u => u.id === user.id);
-  if (!exists) {
-    const updated = [...online, user];
-    localStorage.setItem(onlineKey, JSON.stringify(updated));
-    localStorage.setItem('mdc_online_users_timestamp', Date.now().toString());
-    console.log('User went online:', user.fullName);
-    console.log('Updated online users:', updated);
-    window.dispatchEvent(new CustomEvent('online_users_changed'));
-    broadcastChannel?.postMessage({ type: 'online_users_changed' });
+  
+  // Обновляем timestamp для существующего или добавляем нового
+  const existingIndex = online.findIndex(u => u.id === user.id);
+  const userWithTimestamp: OnlineUserWithTimestamp = { ...user, lastHeartbeat: Date.now() };
+  
+  let updated: OnlineUserWithTimestamp[];
+  if (existingIndex >= 0) {
+    updated = [...online];
+    updated[existingIndex] = userWithTimestamp;
+    console.log('User heartbeat updated:', user.fullName);
   } else {
-    console.log('User already online:', user.fullName);
+    updated = [...online, userWithTimestamp];
+    console.log('User went online:', user.fullName);
   }
+  
+  localStorage.setItem(onlineKey, JSON.stringify(updated));
+  localStorage.setItem('mdc_online_users_timestamp', Date.now().toString());
+  console.log('Updated online users:', updated);
+  window.dispatchEvent(new CustomEvent('online_users_changed'));
+  broadcastChannel?.postMessage({ type: 'online_users_changed' });
 };
 
 export const removeOnlineUser = (userId: string): void => {

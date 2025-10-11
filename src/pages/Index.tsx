@@ -27,12 +27,21 @@ const Index = () => {
 
   useEffect(() => {
     if (currentUser) {
+      // Отправляем heartbeat каждые 5 секунд
+      const heartbeatInterval = setInterval(() => {
+        addOnlineUser(currentUser);
+      }, 5000);
+      
+      // Удаляем пользователя только при настоящем выходе
       const handleBeforeUnload = () => {
         removeOnlineUser(currentUser.id);
       };
       window.addEventListener('beforeunload', handleBeforeUnload);
+      
       return () => {
+        clearInterval(heartbeatInterval);
         window.removeEventListener('beforeunload', handleBeforeUnload);
+        removeOnlineUser(currentUser.id);
       };
     }
   }, [currentUser]);
