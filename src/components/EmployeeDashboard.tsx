@@ -174,7 +174,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
             <div className="flex items-center space-x-4">
               {dispatcherOnDuty && dispatcherShifts.length > 0 && (
                 <Badge variant="outline" className="gap-2">
-                  <Icon name="Radio" size={14} />
+                  <Icon name="Headphones" size={14} />
                   {dispatcherShifts.length === 1 
                     ? `На связи: ${dispatcherShifts[0].dispatcherName}`
                     : `На дежурстве: ${dispatcherShifts.length} диспетчера`

@@ -501,7 +501,7 @@ export const activatePanic = (crewId: number, userId: string): void => {
   const panicCall = createCall({
     address: crew.location || 'Местоположение неизвестно',
     type: '🚨 КНОПКА ПАНИКИ',
-    priority: 'urgent',
+    priority: 'code99',
     status: 'dispatched',
     assignedUnit: crew.unitName,
     assignedCrewId: crewId,

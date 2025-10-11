@@ -103,7 +103,7 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
                   </Button>
                   {activeDispatchers > 0 && (
                     <Badge variant="secondary" className="gap-2">
-                      <Icon name="Radio" size={14} />
+                      <Icon name="Headphones" size={14} />
                       На дежурстве: {activeDispatchers}
                     </Badge>
                   )}
