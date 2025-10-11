@@ -26,6 +26,7 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
   const [signal100Disabled, setSignal100Disabled] = useState(false);
   const [panicButtonDisabled, setPanicButtonDisabled] = useState(false);
   const [mdtSystemDisabled, setMdtSystemDisabled] = useState(false);
+  const [survSystemEnabled, setSurvSystemEnabled] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -40,6 +41,7 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
     setSignal100Disabled(restrictions.signal100Disabled);
     setPanicButtonDisabled(restrictions.panicButtonDisabled);
     setMdtSystemDisabled(restrictions.mdtSystemDisabled);
+    setSurvSystemEnabled(restrictions.survSystemEnabled);
   }, [currentUser]);
 
   useSync(['system_lockdown_changed', 'user_settings_changed', 'system_restrictions_changed'], () => {
@@ -55,6 +57,7 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
     setSignal100Disabled(restrictions.signal100Disabled);
     setPanicButtonDisabled(restrictions.panicButtonDisabled);
     setMdtSystemDisabled(restrictions.mdtSystemDisabled);
+    setSurvSystemEnabled(restrictions.survSystemEnabled);
   }, 1000);
 
   const handleSoundToggle = (checked: boolean) => {
@@ -145,6 +148,17 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
         ? 'Никто не может нажать кнопку паники'
         : 'Кнопка паники доступна для использования',
       variant: checked ? 'destructive' : 'default'
+    });
+  };
+
+  const handleSurvSystemToggle = (checked: boolean) => {
+    updateSystemRestrictions({ survSystemEnabled: checked });
+    toast({
+      title: checked ? 'СУРВ система включена' : 'СУРВ система отключена',
+      description: checked 
+        ? 'Система управления рабочим временем активирована для всех сотрудников'
+        : 'Система управления рабочим временем деактивирована',
+      variant: checked ? 'default' : 'destructive'
     });
   };
 
@@ -407,6 +421,25 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
                   onCheckedChange={handlePanicButtonToggle}
                   className="data-[state=checked]:bg-warning"
                   disabled={mdtSystemDisabled}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                <div className="space-y-1">
+                  <Label className="text-base font-semibold">
+                    СУРВ (Система управления рабочим временем)
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {survSystemEnabled 
+                      ? 'Сотрудники могут отмечать начало смены, перерывы и окончание смены'
+                      : 'Учёт рабочего времени отключен'
+                    }
+                  </p>
+                </div>
+                <Switch 
+                  checked={survSystemEnabled} 
+                  onCheckedChange={handleSurvSystemToggle}
+                  className="data-[state=checked]:bg-success"
                 />
               </div>
 

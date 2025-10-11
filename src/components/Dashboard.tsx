@@ -10,6 +10,8 @@ import AnalyticsTab from './tabs/AnalyticsTab';
 import LogTab from './tabs/LogTab';
 import SettingsTab from './tabs/SettingsTab';
 import AccountsTab from './tabs/AccountsTab';
+import StatisticsTab from './tabs/StatisticsTab';
+import ShiftControls from './ShiftControls';
 import ProfileDialog from './ProfileDialog';
 import DispatcherPanicAlert from './DispatcherPanicAlert';
 import Signal100Alert from './Signal100Alert';
@@ -30,6 +32,7 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
   const [isOnDuty, setIsOnDuty] = useState(false);
   const [activeDispatchers, setActiveDispatchers] = useState(0);
   const [mdtSystemDisabled, setMdtSystemDisabled] = useState(false);
+  const [survSystemEnabled, setSurvSystemEnabled] = useState(false);
   const { toast } = useToast();
 
   const updateStatus = () => {
@@ -39,8 +42,12 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
     }
     const restrictions = getSystemRestrictions();
     setMdtSystemDisabled(restrictions.mdtSystemDisabled);
+    setSurvSystemEnabled(restrictions.survSystemEnabled);
     
     if (restrictions.mdtSystemDisabled && (activeTab === 'crews' || activeTab === 'calls' || activeTab === 'analytics')) {
+      setActiveTab('log');
+    }
+    if (!restrictions.survSystemEnabled && activeTab === 'statistics') {
       setActiveTab('log');
     }
   };
@@ -186,7 +193,7 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
 
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${canManageAccounts(currentUser) && !mdtSystemDisabled ? 'grid-cols-6' : mdtSystemDisabled ? 'grid-cols-3' : 'grid-cols-5'} lg:w-auto lg:inline-grid`}>
+          <TabsList className={`grid w-full ${canManageAccounts(currentUser) && !mdtSystemDisabled ? 'grid-cols-6' : mdtSystemDisabled ? (survSystemEnabled ? 'grid-cols-4' : 'grid-cols-3') : (survSystemEnabled ? 'grid-cols-6' : 'grid-cols-5')} lg:w-auto lg:inline-grid`}>
             {!mdtSystemDisabled && (
               <>
                 <TabsTrigger value="crews" className="space-x-2">
@@ -207,6 +214,12 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
               <Icon name="FileText" size={16} />
               <span className="hidden sm:inline">Журнал</span>
             </TabsTrigger>
+            {survSystemEnabled && (
+              <TabsTrigger value="statistics" className="space-x-2">
+                <Icon name="TrendingUp" size={16} />
+                <span className="hidden sm:inline">Статистика</span>
+              </TabsTrigger>
+            )}
             {canManageAccounts(currentUser) && (
               <TabsTrigger value="accounts" className="space-x-2">
                 <Icon name="UserCog" size={16} />
@@ -262,6 +275,24 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
           <TabsContent value="log" className="space-y-4">
             <LogTab currentUser={currentUser} />
           </TabsContent>
+
+          {survSystemEnabled && (
+            <TabsContent value="statistics" className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-1">
+                  {currentUser && <ShiftControls currentUser={currentUser} />}
+                </div>
+                <div className="lg:col-span-2">
+                  {currentUser && (
+                    <StatisticsTab 
+                      currentUser={currentUser} 
+                      canViewAllStats={currentUser.role === 'manager' || currentUser.role === 'director'} 
+                    />
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+          )}
 
           {canManageAccounts(currentUser) && (
             <TabsContent value="accounts" className="space-y-4">

@@ -6,6 +6,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
 import ProfileDialog from './ProfileDialog';
+import ShiftControls from './ShiftControls';
+import StatisticsTab from './tabs/StatisticsTab';
 import { type User } from '@/lib/auth';
 import { getUserCrew, getCrewCalls, updateCrewStatus, isDispatcherOnDuty, getActiveDispatcherShifts, getAvailableCrewMembers, createCrew, deleteCrew, getSystemRestrictions, type Crew, type Call } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
@@ -15,7 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import EmployeeTabsContent from './EmployeeTabsContent';
 import PanicButton from './PanicButton';
 import PanicAlert from './PanicAlert';
@@ -44,7 +46,7 @@ const getStatusConfig = (status: Crew['status']) => {
 
 const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) => {
   const [profileOpen, setProfileOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'calls' | 'analytics' | 'logs'>('logs');
+  const [activeTab, setActiveTab] = useState<'calls' | 'analytics' | 'logs' | 'statistics'>('logs');
   const [myCrew, setMyCrew] = useState<Crew | null>(null);
   const [myCalls, setMyCalls] = useState<Call[]>([]);
   const [dispatcherOnDuty, setDispatcherOnDuty] = useState(false);
@@ -54,6 +56,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
   const [availableUsers, setAvailableUsers] = useState<ReturnType<typeof getAvailableCrewMembers>>([]);
   const [crewFormData, setCrewFormData] = useState({ unitName: '', members: [] as string[] });
   const [mdtSystemDisabled, setMdtSystemDisabled] = useState(false);
+  const [survSystemEnabled, setSurvSystemEnabled] = useState(false);
   const { toast } = useToast();
 
   const loadData = () => {
@@ -75,8 +78,12 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
     
     const restrictions = getSystemRestrictions();
     setMdtSystemDisabled(restrictions.mdtSystemDisabled);
+    setSurvSystemEnabled(restrictions.survSystemEnabled);
     
     if (restrictions.mdtSystemDisabled && (activeTab === 'calls' || activeTab === 'analytics')) {
+      setActiveTab('logs');
+    }
+    if (!restrictions.survSystemEnabled && activeTab === 'statistics') {
       setActiveTab('logs');
     }
     
@@ -417,8 +424,8 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
-                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'calls' | 'analytics' | 'logs')} className="w-full">
-                  <TabsList className="grid w-full grid-cols-3">
+                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'calls' | 'analytics' | 'logs' | 'statistics')} className="w-full">
+                  <TabsList className={`grid w-full ${survSystemEnabled ? 'grid-cols-4' : 'grid-cols-3'}`}>
                     <TabsTrigger value="calls" className="gap-2">
                       <Icon name="Phone" size={16} />
                       Вызовы
@@ -431,11 +438,24 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
                       <Icon name="FileText" size={16} />
                       Журнал
                     </TabsTrigger>
+                    {survSystemEnabled && (
+                      <TabsTrigger value="statistics" className="gap-2">
+                        <Icon name="TrendingUp" size={16} />
+                        Статистика
+                      </TabsTrigger>
+                    )}
                   </TabsList>
                 </Tabs>
               </CardHeader>
               <CardContent>
-                <EmployeeTabsContent activeTab={activeTab} myCalls={myCalls} userId={currentUser.id} />
+                {activeTab === 'statistics' && survSystemEnabled ? (
+                  <div className="space-y-6">
+                    <ShiftControls currentUser={currentUser} />
+                    <StatisticsTab currentUser={currentUser} canViewAllStats={false} />
+                  </div>
+                ) : (
+                  <EmployeeTabsContent activeTab={activeTab} myCalls={myCalls} userId={currentUser.id} />
+                )}
               </CardContent>
             </Card>
           </div>
