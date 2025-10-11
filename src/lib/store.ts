@@ -180,8 +180,12 @@ export const getCrews = (): Crew[] => {
   if (stored) {
     try {
       const crews = JSON.parse(stored);
+      console.log('getCrews - raw crews from storage:', crews);
       const filtered = crews.filter((c: Crew) => c.members && c.members.length > 0);
       console.log('getCrews - stored:', crews.length, 'filtered:', filtered.length);
+      if (filtered.length === 0 && crews.length > 0) {
+        console.warn('⚠️ All crews filtered out! Crews without members:', crews);
+      }
       return filtered;
     } catch {
       console.log('getCrews - parse error, returning defaults');
