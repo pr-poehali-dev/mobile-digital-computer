@@ -11,6 +11,11 @@ const Index = () => {
   useEffect(() => {
     const user = getUserSession();
     if (user) {
+      if (typeof user.id === 'number') {
+        clearUserSession();
+        setIsLoading(false);
+        return;
+      }
       setCurrentUser(user);
       setIsAuthenticated(true);
     }

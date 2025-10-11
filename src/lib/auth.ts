@@ -45,6 +45,18 @@ const initializeUsers = () => {
   const existingUsers = localStorage.getItem('mdc_users');
   if (!existingUsers) {
     localStorage.setItem('mdc_users', JSON.stringify(USERS_DB));
+  } else {
+    try {
+      const users = JSON.parse(existingUsers);
+      const needsMigration = users.some((u: any) => typeof u.id === 'number');
+      if (needsMigration) {
+        localStorage.setItem('mdc_users', JSON.stringify(USERS_DB));
+        localStorage.removeItem('mdc_auth');
+        localStorage.removeItem('mdc_user');
+      }
+    } catch {
+      localStorage.setItem('mdc_users', JSON.stringify(USERS_DB));
+    }
   }
 };
 

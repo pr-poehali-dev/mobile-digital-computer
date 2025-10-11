@@ -117,7 +117,13 @@ export const getAllUsers = (): User[] => {
   const stored = localStorage.getItem(USERS_KEY);
   if (stored) {
     try {
-      return JSON.parse(stored);
+      const users = JSON.parse(stored);
+      const needsMigration = users.some((u: any) => typeof u.id === 'number');
+      if (needsMigration) {
+        localStorage.setItem(USERS_KEY, JSON.stringify(defaultUsers));
+        return defaultUsers;
+      }
+      return users;
     } catch {
       return defaultUsers;
     }
