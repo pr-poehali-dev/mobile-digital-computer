@@ -1,26 +1,30 @@
 import { useState, useEffect } from 'react';
 import LoginPage from '@/components/LoginPage';
 import Dashboard from '@/components/Dashboard';
+import { getUserSession, clearUserSession, type User } from '@/lib/auth';
 
 const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const authStatus = localStorage.getItem('mdc_auth');
-    if (authStatus === 'true') {
+    const user = getUserSession();
+    if (user) {
+      setCurrentUser(user);
       setIsAuthenticated(true);
     }
     setIsLoading(false);
   }, []);
 
-  const handleLogin = () => {
-    localStorage.setItem('mdc_auth', 'true');
+  const handleLogin = (user: User) => {
+    setCurrentUser(user);
     setIsAuthenticated(true);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('mdc_auth');
+    clearUserSession();
+    setCurrentUser(null);
     setIsAuthenticated(false);
   };
 
@@ -36,7 +40,7 @@ const Index = () => {
     return <LoginPage onLogin={handleLogin} />;
   }
 
-  return <Dashboard onLogout={handleLogout} />;
+  return <Dashboard onLogout={handleLogout} currentUser={currentUser} />;
 };
 
 export default Index;

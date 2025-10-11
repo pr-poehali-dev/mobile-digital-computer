@@ -3,20 +3,38 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import Icon from '@/components/ui/icon';
+import { authenticate, saveUserSession, type User } from '@/lib/auth';
 
 interface LoginPageProps {
-  onLogin: () => void;
+  onLogin: (user: User) => void;
 }
 
 const LoginPage = ({ onLogin }: LoginPageProps) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username && password) {
-      onLogin();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const result = await authenticate(username, password);
+      
+      if (result.success && result.user) {
+        saveUserSession(result.user);
+        onLogin(result.user);
+      } else {
+        setError(result.error || 'Ошибка авторизации');
+      }
+    } catch (err) {
+      setError('Произошла ошибка при входе');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -38,6 +56,13 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <Icon name="AlertCircle" size={16} />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            
             <div className="space-y-2">
               <Label htmlFor="username">Логин</Label>
               <Input
@@ -46,6 +71,7 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
                 placeholder="Введите логин"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                disabled={isLoading}
                 required
               />
             </div>
@@ -57,13 +83,29 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
                 placeholder="Введите пароль"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
                 required
               />
             </div>
-            <Button type="submit" className="w-full" size="lg">
-              <Icon name="LogIn" size={18} className="mr-2" />
-              Войти в систему
+            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Icon name="Loader2" size={18} className="mr-2 animate-spin" />
+                  Вход...
+                </>
+              ) : (
+                <>
+                  <Icon name="LogIn" size={18} className="mr-2" />
+                  Войти в систему
+                </>
+              )}
             </Button>
+            
+            <div className="mt-4 p-3 bg-muted rounded-lg text-xs text-muted-foreground">
+              <p className="font-medium mb-1">Тестовые аккаунты:</p>
+              <p>Менеджер: manager / Manager2024!</p>
+              <p>Диспетчер: dispatcher / Disp2024!</p>
+            </div>
           </form>
         </CardContent>
       </Card>

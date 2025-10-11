@@ -1,19 +1,22 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import Icon from '@/components/ui/icon';
 import CrewsTab from './tabs/CrewsTab';
 import CallsTab from './tabs/CallsTab';
 import AnalyticsTab from './tabs/AnalyticsTab';
 import LogTab from './tabs/LogTab';
 import SettingsTab from './tabs/SettingsTab';
+import { type User } from '@/lib/auth';
 
 interface DashboardProps {
   onLogout: () => void;
+  currentUser: User | null;
 }
 
-const Dashboard = ({ onLogout }: DashboardProps) => {
+const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
   const [activeTab, setActiveTab] = useState('crews');
 
   return (
@@ -31,10 +34,17 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium text-sidebar-foreground">Диспетчер</p>
-                <p className="text-xs text-sidebar-foreground/70">ID: 10245</p>
-              </div>
+              {currentUser && (
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-medium text-sidebar-foreground">{currentUser.fullName}</p>
+                  <div className="flex items-center justify-end gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      {currentUser.role === 'manager' ? 'Менеджер' : 'Диспетчер'}
+                    </Badge>
+                    <span className="text-xs text-sidebar-foreground/70">ID: {currentUser.id}</span>
+                  </div>
+                </div>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 bg-primary/20">
@@ -42,6 +52,17 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
+                  {currentUser && (
+                    <>
+                      <DropdownMenuLabel>
+                        <div className="flex flex-col space-y-1">
+                          <p className="text-sm font-medium">{currentUser.fullName}</p>
+                          <p className="text-xs text-muted-foreground">{currentUser.email}</p>
+                        </div>
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   <DropdownMenuItem>
                     <Icon name="User" size={16} className="mr-2" />
                     Профиль
