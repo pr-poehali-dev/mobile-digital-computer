@@ -36,7 +36,7 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
     }
   };
 
-  useSync(['dispatcher_shift_changed'], updateStatus);
+  useSync(['dispatcher_shift_changed'], updateStatus, 2000);
 
   const handleToggleDuty = () => {
     if (!currentUser) return;

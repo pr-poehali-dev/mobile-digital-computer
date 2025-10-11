@@ -23,6 +23,18 @@ class SyncManager {
       console.log('[SyncManager] Получено сообщение из другой вкладки:', eventType, event.data);
       this.triggerLocalListeners(eventType);
     });
+
+    // Резервный механизм через storage events
+    window.addEventListener('storage', (event) => {
+      if (event.key && event.key.startsWith('mdc_')) {
+        console.log('[SyncManager] Обнаружено изменение в localStorage:', event.key);
+        // Уведомляем все подписчики о всех типах событий
+        this.triggerLocalListeners('crews_updated');
+        this.triggerLocalListeners('calls_updated');
+        this.triggerLocalListeners('dispatcher_shift_changed');
+        this.triggerLocalListeners('online_users_changed');
+      }
+    });
   }
 
   /**
