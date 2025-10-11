@@ -96,6 +96,21 @@ const storage = {
 
   set(key: string, value: any): void {
     localStorage.setItem(key, JSON.stringify(value));
+    
+    // Уведомляем другие вкладки через syncManager
+    const eventMap: Record<string, any> = {
+      [KEYS.CREWS]: 'crews_updated',
+      [KEYS.CALLS]: 'calls_updated',
+      [KEYS.USERS]: 'users_updated',
+      [KEYS.DISPATCHER_SHIFTS]: 'dispatcher_shift_changed',
+      [KEYS.ONLINE_USERS]: 'online_users_changed',
+      [KEYS.ACTIVITY_LOG]: 'activity_log_updated',
+    };
+    
+    const eventType = eventMap[key];
+    if (eventType) {
+      syncManager.notify(eventType, { key, value });
+    }
   },
 };
 

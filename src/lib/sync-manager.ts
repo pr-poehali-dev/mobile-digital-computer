@@ -13,12 +13,28 @@ type SyncEventType =
 class SyncManager {
   private listeners = new Map<SyncEventType, Set<() => void>>();
   private lastSync = new Map<string, number>();
+  private channel: BroadcastChannel;
 
   constructor() {
-    // Слушаем изменения localStorage от других вкладок
+    // Используем BroadcastChannel для синхронизации между вкладками
+    this.channel = new BroadcastChannel('mdc_sync');
+    
+    // Слушаем сообщения от других вкладок
+    this.channel.onmessage = (event) => {
+      const { eventType, data } = event.data;
+      
+      // Если есть данные, обновляем localStorage
+      if (data && data.key && data.value) {
+        localStorage.setItem(data.key, JSON.stringify(data.value));
+      }
+      
+      // Уведомляем локальных слушателей
+      this.triggerLocalListeners(eventType);
+    };
+
+    // Дополнительно слушаем storage event (для обратной совместимости)
     window.addEventListener('storage', (event) => {
       if (event.key?.startsWith('mdc_') && !event.key.includes('_sync_ts_')) {
-        // При любом изменении данных обновляем все компоненты
         this.triggerLocalListeners('crews_updated');
         this.triggerLocalListeners('calls_updated');
         this.triggerLocalListeners('dispatcher_shift_changed');
@@ -31,9 +47,11 @@ class SyncManager {
   /**
    * Уведомить все вкладки и компоненты о событии
    */
-  notify(eventType: SyncEventType): void {
-    // Записываем timestamp для уведомления других вкладок
-    localStorage.setItem(`mdc_sync_ts_${eventType}`, Date.now().toString());
+  notify(eventType: SyncEventType, data?: { key: string; value: any }): void {
+    // Отправляем сообщение всем вкладкам через BroadcastChannel
+    this.channel.postMessage({ eventType, data });
+    
+    // Уведомляем локальных слушателей в текущей вкладке
     this.triggerLocalListeners(eventType);
   }
 
@@ -60,6 +78,13 @@ class SyncManager {
     if (listeners) {
       listeners.forEach(callback => callback());
     }
+  }
+
+  /**
+   * Закрыть канал синхронизации
+   */
+  destroy(): void {
+    this.channel.close();
   }
 }
 
