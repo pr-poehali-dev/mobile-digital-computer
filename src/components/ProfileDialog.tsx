@@ -1,9 +1,15 @@
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import Icon from '@/components/ui/icon';
-import { type User } from '@/lib/auth';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import Icon from "@/components/ui/icon";
+import { type User } from "@/lib/auth";
 
 interface ProfileDialogProps {
   open: boolean;
@@ -13,11 +19,16 @@ interface ProfileDialogProps {
 
 const getRoleLabel = (role: string) => {
   switch (role) {
-    case 'manager': return 'Менеджер';
-    case 'dispatcher': return 'Диспетчер';
-    case 'supervisor': return 'Руководитель';
-    case 'employee': return 'Сотрудник';
-    default: return role;
+    case "manager":
+      return "Менеджер";
+    case "dispatcher":
+      return "Диспетчер";
+    case "supervisor":
+      return "Руководитель";
+    case "employee":
+      return "Сотрудник";
+    default:
+      return role;
   }
 };
 
@@ -32,15 +43,16 @@ const ProfileDialog = ({ open, onOpenChange, user }: ProfileDialogProps) => {
             <Icon name="User" size={20} />
             Профиль пользователя
           </DialogTitle>
-          <DialogDescription>
-            Информация о вашем аккаунте
-          </DialogDescription>
+          <DialogDescription>Информация о вашем аккаунте</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label>ID</Label>
             <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="text-lg font-mono px-4 py-2">
+              <Badge
+                variant="secondary"
+                className="text-lg font-mono px-4 py-2"
+              >
                 #{user.id}
               </Badge>
               <Badge variant="outline">{getRoleLabel(user.role)}</Badge>
@@ -60,7 +72,8 @@ const ProfileDialog = ({ open, onOpenChange, user }: ProfileDialogProps) => {
               <span>Информация</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Для изменения данных профиля обратитесь к администратору системы
+              Для изменения данных профиля обратитесь к руководителю или
+              менеджеру системы
             </p>
           </div>
         </div>
