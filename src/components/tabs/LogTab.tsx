@@ -57,7 +57,11 @@ const LogTab = ({ currentUser }: LogTabProps) => {
   useSync(['logs_updated'], loadLogs, 2000);
 
   const filteredLogs = logs.filter(log => {
-    if (filterType === 'panic' && log.type !== 'panic_activated' && log.type !== 'panic_reset') {
+    if (filterType === 'panic' && 
+        log.type !== 'panic_activated' && 
+        log.type !== 'panic_reset' && 
+        log.type !== 'signal100_activated' && 
+        log.type !== 'signal100_reset') {
       return false;
     }
     if (!searchQuery) return true;
@@ -70,7 +74,12 @@ const LogTab = ({ currentUser }: LogTabProps) => {
     );
   });
 
-  const panicLogsCount = logs.filter(log => log.type === 'panic_activated' || log.type === 'panic_reset').length;
+  const panicLogsCount = logs.filter(log => 
+    log.type === 'panic_activated' || 
+    log.type === 'panic_reset' || 
+    log.type === 'signal100_activated' || 
+    log.type === 'signal100_reset'
+  ).length;
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {

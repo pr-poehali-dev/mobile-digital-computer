@@ -113,14 +113,9 @@ const Signal100Alert = ({ currentUser }: Signal100AlertProps) => {
     <Card className="border-yellow-500 border-2 bg-yellow-50 animate-pulse">
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <Icon name="Radio" size={32} className="text-yellow-600 flex-shrink-0" />
+          <Icon name="Radio" size={24} className="text-yellow-600 flex-shrink-0" />
           <div className="flex-1">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-bold text-yellow-900 text-lg">🟡 СИГНАЛ 100</h3>
-              <Badge variant="outline" className="bg-yellow-100 text-yellow-900 border-yellow-500">
-                {minutesRemaining}:{secondsRemaining.toString().padStart(2, '0')}
-              </Badge>
-            </div>
+            <h3 className="font-bold text-yellow-900 text-base">🟡 СИГНАЛ 100</h3>
             {signal100.crewName && (
               <p className="text-sm text-yellow-800 font-semibold mt-1">
                 Экипаж: {signal100.crewName}
@@ -130,7 +125,7 @@ const Signal100Alert = ({ currentUser }: Signal100AlertProps) => {
               Активировал: {signal100.triggeredByName}
             </p>
             <p className="text-xs text-yellow-600 mt-1">
-              Звуковой сигнал 440 Гц повторяется каждые 15 секунд
+              Активировано: {new Date(signal100.triggeredAt).toLocaleTimeString('ru-RU')}
             </p>
             
             {currentUser && canManageAccounts(currentUser) && (

@@ -278,6 +278,8 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
     (c) => c.status === "en-route" || c.status === "on-scene",
   ).length;
   const panicCount = crews.filter((c) => c.panicActive).length;
+  const signal100Count = signal100?.active ? 1 : 0;
+  const totalAlertsCount = panicCount + signal100Count;
   const pendingCalls = calls.filter((c) => c.status === "pending");
 
   return (
@@ -295,19 +297,17 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
               <Button
                 onClick={handleSignal100Reset}
                 variant="outline"
-                size="sm"
                 className="gap-2 border-yellow-500 text-yellow-600 hover:bg-yellow-50"
               >
-                <Icon name="RadioOff" size={16} />
+                <Icon name="RadioOff" size={18} />
                 Отменить сигнал 100
               </Button>
             ) : (
               <Button
                 onClick={handleSignal100Activate}
-                size="sm"
                 className="gap-2 bg-yellow-500 hover:bg-yellow-600 text-white"
               >
-                <Icon name="Radio" size={16} />
+                <Icon name="Radio" size={18} />
                 Сигнал 100
               </Button>
             )
@@ -352,16 +352,16 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
             <div className="text-3xl font-bold text-primary">{activeCount}</div>
           </CardContent>
         </Card>
-        <Card className={panicCount > 0 ? 'border-red-600 border-2 bg-red-50' : ''}>
+        <Card className={totalAlertsCount > 0 ? 'border-red-600 border-2 bg-red-50' : ''}>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Icon name="AlertTriangle" size={16} className={panicCount > 0 ? 'text-red-600' : ''} />
+              <Icon name="AlertTriangle" size={16} className={totalAlertsCount > 0 ? 'text-red-600' : ''} />
               Сигналы тревоги
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-3xl font-bold ${panicCount > 0 ? 'text-red-600' : ''}`}>
-              {panicCount}
+            <div className={`text-3xl font-bold ${totalAlertsCount > 0 ? 'text-red-600' : ''}`}>
+              {totalAlertsCount}
             </div>
           </CardContent>
         </Card>
