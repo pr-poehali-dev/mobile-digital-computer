@@ -13,7 +13,7 @@ import AccountsTab from './tabs/AccountsTab';
 import ProfileDialog from './ProfileDialog';
 import { type User } from '@/lib/auth';
 import { canManageAccounts } from '@/lib/permissions';
-import { startDispatcherShift, endDispatcherShift, getActiveDispatcherShift } from '@/lib/store';
+import { startDispatcherShift, endDispatcherShift, isUserOnDuty, getActiveDispatcherShifts } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 
 interface DashboardProps {
@@ -25,12 +25,13 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
   const [activeTab, setActiveTab] = useState('crews');
   const [profileOpen, setProfileOpen] = useState(false);
   const [isOnDuty, setIsOnDuty] = useState(false);
+  const [activeDispatchers, setActiveDispatchers] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
-    const shift = getActiveDispatcherShift();
-    if (shift && currentUser && shift.dispatcherId === currentUser.id) {
-      setIsOnDuty(true);
+    if (currentUser) {
+      setIsOnDuty(isUserOnDuty(currentUser.id));
+      setActiveDispatchers(getActiveDispatcherShifts().length);
     }
   }, [currentUser]);
 
@@ -38,20 +39,35 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
     if (!currentUser) return;
     
     if (isOnDuty) {
-      endDispatcherShift();
+      endDispatcherShift(currentUser.id);
       setIsOnDuty(false);
+      const remaining = getActiveDispatcherShifts().length;
+      setActiveDispatchers(remaining);
       toast({
         title: 'Дежурство завершено',
-        description: 'Вы покинули дежурство. Сотрудники могут управлять статусами самостоятельно.',
+        description: remaining > 0 
+          ? `Вы покинули дежурство. На дежурстве осталось диспетчеров: ${remaining}`
+          : 'Вы покинули дежурство. Сотрудники могут управлять статусами самостоятельно.',
       });
     } else {
       startDispatcherShift(currentUser);
       setIsOnDuty(true);
+      const total = getActiveDispatcherShifts().length;
+      setActiveDispatchers(total);
       toast({
         title: 'Дежурство начато',
-        description: 'Вы заступили на дежурство. Управление статусами через диспетчера.',
+        description: total > 1 
+          ? `Вы заступили на дежурство. Всего на дежурстве: ${total}`
+          : 'Вы заступили на дежурство. Управление статусами через диспетчера.',
       });
     }
+  };
+
+  const handleLogout = () => {
+    if (currentUser && isOnDuty) {
+      endDispatcherShift(currentUser.id);
+    }
+    onLogout();
   };
 
   return (
@@ -70,15 +86,23 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
             </div>
             <div className="flex items-center space-x-4">
               {currentUser?.role === 'dispatcher' && (
-                <Button
-                  onClick={handleToggleDuty}
-                  variant={isOnDuty ? 'destructive' : 'default'}
-                  size="sm"
-                  className="gap-2"
-                >
-                  <Icon name={isOnDuty ? 'LogOut' : 'LogIn'} size={16} />
-                  {isOnDuty ? 'Покинуть дежурство' : 'Заступить на дежурство'}
-                </Button>
+                <>
+                  <Button
+                    onClick={handleToggleDuty}
+                    variant={isOnDuty ? 'destructive' : 'default'}
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <Icon name={isOnDuty ? 'LogOut' : 'LogIn'} size={16} />
+                    {isOnDuty ? 'Покинуть дежурство' : 'Заступить на дежурство'}
+                  </Button>
+                  {activeDispatchers > 0 && (
+                    <Badge variant="secondary" className="gap-2">
+                      <Icon name="Radio" size={14} />
+                      На дежурстве: {activeDispatchers}
+                    </Badge>
+                  )}
+                </>
               )}
               {currentUser && (
                 <div className="text-right hidden sm:block">
@@ -123,7 +147,7 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
                     Настройки
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={onLogout} className="text-destructive">
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                     <Icon name="LogOut" size={16} className="mr-2" />
                     Выйти
                   </DropdownMenuItem>
@@ -166,11 +190,35 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
           </TabsList>
 
           <TabsContent value="crews" className="space-y-4">
-            <CrewsTab />
+            {currentUser?.role === 'dispatcher' && !isOnDuty ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <Icon name="Lock" size={64} className="text-muted-foreground mb-4 opacity-50" />
+                <h3 className="text-2xl font-semibold mb-2">Управление заблокировано</h3>
+                <p className="text-muted-foreground mb-6">Заступите на дежурство для управления экипажами</p>
+                <Button onClick={handleToggleDuty} size="lg">
+                  <Icon name="LogIn" size={18} className="mr-2" />
+                  Заступить на дежурство
+                </Button>
+              </div>
+            ) : (
+              <CrewsTab />
+            )}
           </TabsContent>
 
           <TabsContent value="calls" className="space-y-4">
-            <CallsTab currentUser={currentUser} />
+            {currentUser?.role === 'dispatcher' && !isOnDuty ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <Icon name="Lock" size={64} className="text-muted-foreground mb-4 opacity-50" />
+                <h3 className="text-2xl font-semibold mb-2">Управление заблокировано</h3>
+                <p className="text-muted-foreground mb-6">Заступите на дежурство для управления вызовами</p>
+                <Button onClick={handleToggleDuty} size="lg">
+                  <Icon name="LogIn" size={18} className="mr-2" />
+                  Заступить на дежурство
+                </Button>
+              </div>
+            ) : (
+              <CallsTab currentUser={currentUser} />
+            )}
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-4">

@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Icon from '@/components/ui/icon';
 import ProfileDialog from './ProfileDialog';
 import { type User } from '@/lib/auth';
-import { getUserCrew, getCrewCalls, updateCrewStatus, isDispatcherOnDuty, getActiveDispatcherShift, type Crew, type Call } from '@/lib/store';
+import { getUserCrew, getCrewCalls, updateCrewStatus, isDispatcherOnDuty, getActiveDispatcherShifts, type Crew, type Call } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 
 interface EmployeeDashboardProps {
@@ -46,7 +46,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
   const [myCrew, setMyCrew] = useState<Crew | null>(null);
   const [myCalls, setMyCalls] = useState<Call[]>([]);
   const [dispatcherOnDuty, setDispatcherOnDuty] = useState(false);
-  const [dispatcherShift, setDispatcherShift] = useState<ReturnType<typeof getActiveDispatcherShift>>(null);
+  const [dispatcherShifts, setDispatcherShifts] = useState<ReturnType<typeof getActiveDispatcherShifts>>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -67,7 +67,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
     }
     
     setDispatcherOnDuty(isDispatcherOnDuty());
-    setDispatcherShift(getActiveDispatcherShift());
+    setDispatcherShifts(getActiveDispatcherShifts());
   };
 
   const handleStatusChange = (newStatus: Crew['status']) => {
@@ -109,10 +109,13 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              {dispatcherOnDuty && dispatcherShift && (
+              {dispatcherOnDuty && dispatcherShifts.length > 0 && (
                 <Badge variant="outline" className="gap-2">
                   <Icon name="Radio" size={14} />
-                  На связи: {dispatcherShift.dispatcherName}
+                  {dispatcherShifts.length === 1 
+                    ? `На связи: ${dispatcherShifts[0].dispatcherName}`
+                    : `На дежурстве: ${dispatcherShifts.length} диспетчера`
+                  }
                 </Badge>
               )}
               <div className="text-right hidden sm:block">

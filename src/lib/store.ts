@@ -41,7 +41,7 @@ export interface DispatcherShift {
 const CALLS_KEY = 'mdc_calls';
 const USERS_KEY = 'mdc_users';
 const CREWS_KEY = 'mdc_crews';
-const DISPATCHER_SHIFT_KEY = 'mdc_dispatcher_shift';
+const DISPATCHER_SHIFTS_KEY = 'mdc_dispatcher_shifts';
 
 const defaultCalls: Call[] = [
   { id: 'C-1024', time: '13:48', address: 'ул. Ленина, 45', type: 'ДТП', priority: 'urgent', status: 'dispatched', assignedUnit: 'NU-12', assignedCrewId: 2, dispatcherId: '10002', dispatcherName: 'Иванов И.И.', createdAt: new Date().toISOString() },
@@ -253,34 +253,51 @@ export const getAvailableCrewMembers = (): User[] => {
 };
 
 export const startDispatcherShift = (dispatcher: User): void => {
-  const shift: DispatcherShift = {
+  const shifts = getActiveDispatcherShifts();
+  const newShift: DispatcherShift = {
     dispatcherId: dispatcher.id,
     dispatcherName: dispatcher.fullName,
     startTime: new Date().toISOString(),
     isActive: true
   };
-  localStorage.setItem(DISPATCHER_SHIFT_KEY, JSON.stringify(shift));
+  const alreadyOnDuty = shifts.find(s => s.dispatcherId === dispatcher.id);
+  if (!alreadyOnDuty) {
+    shifts.push(newShift);
+    localStorage.setItem(DISPATCHER_SHIFTS_KEY, JSON.stringify(shifts));
+  }
 };
 
-export const endDispatcherShift = (): void => {
-  localStorage.removeItem(DISPATCHER_SHIFT_KEY);
+export const endDispatcherShift = (dispatcherId: string): void => {
+  const shifts = getActiveDispatcherShifts();
+  const filtered = shifts.filter(s => s.dispatcherId !== dispatcherId);
+  localStorage.setItem(DISPATCHER_SHIFTS_KEY, JSON.stringify(filtered));
 };
 
-export const getActiveDispatcherShift = (): DispatcherShift | null => {
-  const stored = localStorage.getItem(DISPATCHER_SHIFT_KEY);
+export const getActiveDispatcherShifts = (): DispatcherShift[] => {
+  const stored = localStorage.getItem(DISPATCHER_SHIFTS_KEY);
   if (stored) {
     try {
       return JSON.parse(stored);
     } catch {
-      return null;
+      return [];
     }
   }
-  return null;
+  return [];
+};
+
+export const getActiveDispatcherShift = (): DispatcherShift | null => {
+  const shifts = getActiveDispatcherShifts();
+  return shifts.length > 0 ? shifts[0] : null;
 };
 
 export const isDispatcherOnDuty = (): boolean => {
-  const shift = getActiveDispatcherShift();
-  return shift !== null && shift.isActive;
+  const shifts = getActiveDispatcherShifts();
+  return shifts.length > 0;
+};
+
+export const isUserOnDuty = (userId: string): boolean => {
+  const shifts = getActiveDispatcherShifts();
+  return shifts.some(s => s.dispatcherId === userId);
 };
 
 export const getUserCrew = (userId: string): Crew | null => {
