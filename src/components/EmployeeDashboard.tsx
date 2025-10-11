@@ -7,8 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Icon from '@/components/ui/icon';
 import ProfileDialog from './ProfileDialog';
 import { type User } from '@/lib/auth';
-import { getUserCrew, getCrewCalls, updateCrewStatus, isDispatcherOnDuty, getActiveDispatcherShifts, type Crew, type Call } from '@/lib/store';
+import { getUserCrew, getCrewCalls, updateCrewStatus, isDispatcherOnDuty, getActiveDispatcherShifts, getAvailableCrewMembers, createCrew, deleteCrew, type Crew, type Call } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface EmployeeDashboardProps {
   onLogout: () => void;
@@ -47,6 +52,10 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
   const [myCalls, setMyCalls] = useState<Call[]>([]);
   const [dispatcherOnDuty, setDispatcherOnDuty] = useState(false);
   const [dispatcherShifts, setDispatcherShifts] = useState<ReturnType<typeof getActiveDispatcherShifts>>([]);
+  const [createDialog, setCreateDialog] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [availableUsers, setAvailableUsers] = useState<ReturnType<typeof getAvailableCrewMembers>>([]);
+  const [crewFormData, setCrewFormData] = useState({ unitName: '', members: [] as string[] });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -54,6 +63,12 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
     const interval = setInterval(loadData, 5000);
     return () => clearInterval(interval);
   }, [currentUser]);
+
+  useEffect(() => {
+    loadAvailableUsers();
+    const interval = setInterval(loadAvailableUsers, 2000);
+    return () => clearInterval(interval);
+  }, []);
 
   const loadData = () => {
     if (!currentUser) return;
@@ -68,6 +83,40 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
     
     setDispatcherOnDuty(isDispatcherOnDuty());
     setDispatcherShifts(getActiveDispatcherShifts());
+  };
+
+  const loadAvailableUsers = () => {
+    setAvailableUsers(getAvailableCrewMembers());
+  };
+
+  const handleCreateCrew = () => {
+    if (!crewFormData.unitName.trim()) {
+      toast({ title: 'Ошибка', description: 'Введите название экипажа', variant: 'destructive' });
+      return;
+    }
+    if (!crewFormData.members.includes(currentUser!.id)) {
+      crewFormData.members.push(currentUser!.id);
+    }
+    createCrew(crewFormData.unitName, crewFormData.members);
+    loadData();
+    setCreateDialog(false);
+    setCrewFormData({ unitName: '', members: [] });
+    toast({ title: 'Экипаж создан', description: `Экипаж ${crewFormData.unitName} успешно создан` });
+  };
+
+  const handleDeleteCrew = () => {
+    if (!myCrew) return;
+    deleteCrew(myCrew.id);
+    loadData();
+    setDeleteDialog(false);
+    toast({ title: 'Экипаж удален', description: 'Ваш экипаж удален из системы' });
+  };
+
+  const toggleMember = (userId: string) => {
+    setCrewFormData(prev => ({
+      ...prev,
+      members: prev.members.includes(userId) ? prev.members.filter(id => id !== userId) : [...prev.members, userId]
+    }));
   };
 
   const handleStatusChange = (newStatus: Crew['status']) => {
@@ -221,10 +270,28 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
                   <div className="text-center py-8">
                     <Icon name="UserX" size={48} className="mx-auto mb-3 opacity-50 text-muted-foreground" />
                     <p className="text-muted-foreground">Вы не прикреплены к экипажу</p>
-                    <p className="text-sm text-muted-foreground mt-1">Обратитесь к диспетчеру</p>
+                    {!dispatcherOnDuty ? (
+                      <>
+                        <p className="text-sm text-muted-foreground mt-1 mb-4">Создайте экипаж самостоятельно</p>
+                        <Button onClick={() => setCreateDialog(true)} variant="default">
+                          <Icon name="Plus" size={16} className="mr-2" />
+                          Создать экипаж
+                        </Button>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground mt-1">Обратитесь к диспетчеру</p>
+                    )}
                   </div>
                 )}
               </CardContent>
+              {myCrew && !dispatcherOnDuty && (
+                <div className="px-6 pb-4">
+                  <Button onClick={() => setDeleteDialog(true)} variant="destructive" className="w-full">
+                    <Icon name="Trash2" size={16} className="mr-2" />
+                    Удалить экипаж
+                  </Button>
+                </div>
+              )}
             </Card>
           </div>
 
@@ -311,6 +378,84 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
         onOpenChange={setProfileOpen}
         user={currentUser}
       />
+
+      <Dialog open={createDialog} onOpenChange={setCreateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Создать экипаж</DialogTitle>
+            <DialogDescription>
+              Укажите название и добавьте онлайн сотрудников в экипаж
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="unitName">Название экипажа</Label>
+              <Input
+                id="unitName"
+                placeholder="Например: NU-01"
+                value={crewFormData.unitName}
+                onChange={(e) => setCrewFormData({ ...crewFormData, unitName: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Состав экипажа (онлайн сотрудники)</Label>
+              <div className="border rounded-lg p-4 space-y-3 max-h-60 overflow-y-auto">
+                <div className="flex items-center space-x-2 p-2 bg-primary/5 rounded">
+                  <Checkbox checked disabled />
+                  <Label className="flex-1 cursor-default">
+                    <div className="font-medium">{currentUser?.fullName}</div>
+                    <div className="text-xs text-muted-foreground">Вы (командир)</div>
+                  </Label>
+                </div>
+                {availableUsers.filter(u => u.id !== currentUser?.id).length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Нет других онлайн сотрудников
+                  </p>
+                ) : (
+                  availableUsers
+                    .filter(u => u.id !== currentUser?.id)
+                    .map((user) => (
+                      <div key={user.id} className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded">
+                        <Checkbox
+                          checked={crewFormData.members.includes(user.id)}
+                          onCheckedChange={() => toggleMember(user.id)}
+                          id={`user-${user.id}`}
+                        />
+                        <Label htmlFor={`user-${user.id}`} className="flex-1 cursor-pointer">
+                          <div className="font-medium">{user.fullName}</div>
+                          <div className="text-xs text-muted-foreground">ID: {user.id}</div>
+                        </Label>
+                      </div>
+                    ))
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateDialog(false)}>
+              Отмена
+            </Button>
+            <Button onClick={handleCreateCrew}>Создать</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={deleteDialog} onOpenChange={setDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить экипаж?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Вы уверены, что хотите удалить экипаж {myCrew?.unitName}? Это действие нельзя отменить.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCrew} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Удалить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
