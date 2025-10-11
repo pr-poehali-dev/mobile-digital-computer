@@ -248,20 +248,31 @@ const AnalyticsTab = () => {
           <CardTitle>Активность по часам</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-end justify-between h-48 gap-2">
-            {[12, 8, 15, 22, 18, 25, 30, 28, 24, 20, 26, 22, 18, 15, 12, 10, 8, 12, 16, 20, 24, 26, 22, 18].map((value, idx) => (
-              <div key={idx} className="flex-1 flex flex-col items-center gap-2">
-                <div 
-                  className="w-full bg-primary rounded-t transition-all hover:bg-primary/80 cursor-pointer"
-                  style={{ height: `${(value / 30) * 100}%` }}
-                  title={`${idx}:00 - ${value} вызовов`}
-                />
-                {idx % 4 === 0 && (
-                  <span className="text-xs text-muted-foreground">{idx}:00</span>
-                )}
+          {(() => {
+            const hourlyActivity = Array(24).fill(0);
+            calls.forEach(call => {
+              const hour = new Date(call.createdAt).getHours();
+              hourlyActivity[hour]++;
+            });
+            const maxHourly = Math.max(...hourlyActivity, 1);
+            
+            return (
+              <div className="flex items-end justify-between h-48 gap-2">
+                {hourlyActivity.map((value, idx) => (
+                  <div key={idx} className="flex-1 flex flex-col items-center gap-2">
+                    <div 
+                      className="w-full bg-primary rounded-t transition-all hover:bg-primary/80 cursor-pointer"
+                      style={{ height: `${value > 0 ? (value / maxHourly) * 100 : 2}%` }}
+                      title={`${idx}:00 - ${value} вызовов`}
+                    />
+                    {idx % 4 === 0 && (
+                      <span className="text-xs text-muted-foreground">{idx}:00</span>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            );
+          })()}
         </CardContent>
       </Card>
     </div>
