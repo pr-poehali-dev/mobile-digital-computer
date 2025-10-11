@@ -93,6 +93,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
       crewFormData.members.push(currentUser!.id);
     }
     await createCrew(crewFormData.unitName, crewFormData.members, currentUser!.id);
+    await loadData();
     setCreateDialog(false);
     setCrewFormData({ unitName: '', members: [] });
     toast({ title: 'Экипаж создан', description: `Экипаж ${crewFormData.unitName} успешно создан` });
