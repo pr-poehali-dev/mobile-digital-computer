@@ -51,7 +51,6 @@ const Index = () => {
     setIsAuthenticated(true);
     addOnlineUser(user);
     
-    // Добавить тестовый лог о входе
     addActivityLog({
       type: 'crew_status',
       userId: user.id,
@@ -59,7 +58,6 @@ const Index = () => {
       description: `Вход в систему`,
       details: `Роль: ${user.role}`
     });
-    console.log('Тестовый лог создан при входе пользователя:', user.fullName);
   };
 
   const handleLogout = () => {

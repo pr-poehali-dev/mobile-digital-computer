@@ -1,9 +1,14 @@
 import type { Crew } from './store';
 import funcUrls from '../../backend/func2url.json';
 
-const UNITS_API_URL = funcUrls.units;
+const UNITS_API_URL = (funcUrls as any).units;
 
 export const fetchUnits = async (): Promise<Crew[]> => {
+  if (!UNITS_API_URL) {
+    console.error('Units API URL not configured');
+    return [];
+  }
+  
   try {
     const response = await fetch(UNITS_API_URL, {
       method: 'GET',

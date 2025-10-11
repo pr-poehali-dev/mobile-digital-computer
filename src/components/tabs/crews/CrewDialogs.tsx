@@ -175,10 +175,6 @@ const CrewDialogs = ({
             </div>
             <div className="space-y-2">
               <Label>Сотрудники (доступно: {availableUsers.length}) *</Label>
-              {(() => {
-                console.log("Create dialog - availableUsers state:", availableUsers);
-                return null;
-              })()}
               {availableUsers.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   Нет доступных сотрудников для формирования экипажа

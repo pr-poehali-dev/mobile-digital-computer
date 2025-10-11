@@ -376,7 +376,6 @@ export const syncCrewsFromAPI = async (): Promise<void> => {
 };
 
 export const getCrews = (): Crew[] => {
-  syncCrewsFromAPI();
   return storage.get<Crew[]>(KEYS.CREWS, []);
 };
 

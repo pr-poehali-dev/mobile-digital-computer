@@ -67,9 +67,7 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
 
   const loadCrews = async () => {
     await syncCrewsFromAPI();
-    const crews = getCrews();
-    console.log('CrewsTab - Loading crews:', crews);
-    setCrews(crews);
+    setCrews(getCrews());
   };
 
   const loadCalls = () => {
@@ -77,9 +75,7 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
   };
 
   const loadAvailableUsers = () => {
-    const users = getAvailableCrewMembers();
-    console.log('CrewsTab - Loading available users:', users);
-    setAvailableUsers(users);
+    setAvailableUsers(getAvailableCrewMembers());
   };
 
   const handleEdit = (crew: Crew) => {

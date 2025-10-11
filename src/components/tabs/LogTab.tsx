@@ -40,9 +40,7 @@ const LogTab = ({ currentUser }: LogTabProps) => {
   const canManage = currentUser?.role === 'manager' || currentUser?.role === 'supervisor';
 
   const loadLogs = () => {
-    const logs = getActivityLogs();
-    console.log('LogTab loadLogs: получено логов =', logs.length);
-    setLogs(logs);
+    setLogs(getActivityLogs());
   };
 
   useSync(['logs_updated'], loadLogs, 2000);
@@ -100,11 +98,6 @@ const LogTab = ({ currentUser }: LogTabProps) => {
 
   return (
     <div className="space-y-6">
-      {/* DEBUG: показать статус */}
-      <div className="p-4 bg-yellow-100 dark:bg-yellow-900 rounded text-sm">
-        <strong>DEBUG:</strong> currentUser={currentUser?.fullName || 'null'} | role={currentUser?.role || 'null'} | canManage={canManage ? 'ДА' : 'НЕТ'}
-      </div>
-      
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-4">
