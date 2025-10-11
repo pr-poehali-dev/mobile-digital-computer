@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import Icon from '@/components/ui/icon';
-import { getCrews, updateCrewStatus, createCrew, updateCrew, deleteCrew, getAvailableCrewMembers, getAllUsers, type Crew } from '@/lib/store';
+import { getCrews, updateCrewStatus, createCrew, updateCrew, deleteCrew, getAvailableCrewMembers, getAllUsers, getCalls, assignCrewToCall, updateCallStatus, type Crew, type Call } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 
 const getStatusConfig = (status: Crew['status']) => {
@@ -27,10 +27,13 @@ const getStatusConfig = (status: Crew['status']) => {
 
 const CrewsTab = () => {
   const [crews, setCrews] = useState<Crew[]>([]);
+  const [calls, setCalls] = useState<Call[]>([]);
   const [editDialog, setEditDialog] = useState<{ open: boolean; crew: Crew | null }>({ open: false, crew: null });
   const [createDialog, setCreateDialog] = useState(false);
   const [manageDialog, setManageDialog] = useState<{ open: boolean; crew: Crew | null }>({ open: false, crew: null });
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; crewId: number | null }>({ open: false, crewId: null });
+  const [assignDialog, setAssignDialog] = useState<{ open: boolean; crew: Crew | null }>({ open: false, crew: null });
+  const [selectedCallId, setSelectedCallId] = useState<string>('');
   const [formData, setFormData] = useState({
     status: 'available' as Crew['status'],
     location: ''
@@ -43,10 +46,15 @@ const CrewsTab = () => {
 
   useEffect(() => {
     loadCrews();
+    loadCalls();
   }, []);
 
   const loadCrews = () => {
     setCrews(getCrews());
+  };
+
+  const loadCalls = () => {
+    setCalls(getCalls());
   };
 
   const handleEdit = (crew: Crew) => {
@@ -141,6 +149,25 @@ const CrewsTab = () => {
     });
   };
 
+  const handleAssign = (crew: Crew) => {
+    setSelectedCallId('');
+    setAssignDialog({ open: true, crew });
+  };
+
+  const handleAssignToCall = () => {
+    if (assignDialog.crew && selectedCallId) {
+      assignCrewToCall(selectedCallId, assignDialog.crew.id);
+      updateCrewStatus(assignDialog.crew.id, 'en-route');
+      loadCrews();
+      loadCalls();
+      setAssignDialog({ open: false, crew: null });
+      toast({
+        title: 'Экипаж назначен',
+        description: `${assignDialog.crew.unitName} направлен на вызов`,
+      });
+    }
+  };
+
   const toggleMember = (userId: string) => {
     setCrewFormData(prev => ({
       ...prev,
@@ -154,6 +181,20 @@ const CrewsTab = () => {
   const allUsers = getAllUsers();
   const availableCount = crews.filter(c => c.status === 'available').length;
   const activeCount = crews.filter(c => c.status === 'en-route' || c.status === 'on-scene').length;
+  const pendingCalls = calls.filter(c => c.status === 'pending');
+
+  const getPriorityConfig = (priority: Call['priority']) => {
+    switch (priority) {
+      case 'urgent':
+        return { label: 'Критический', color: 'text-destructive' };
+      case 'high':
+        return { label: 'Высокий', color: 'text-orange-500' };
+      case 'medium':
+        return { label: 'Средний', color: 'text-yellow-500' };
+      case 'low':
+        return { label: 'Низкий', color: 'text-blue-500' };
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -258,12 +299,12 @@ const CrewsTab = () => {
                   </Button>
                   {crew.status === 'available' && (
                     <Button 
-                      variant="outline" 
+                      variant="default" 
                       className="flex-1" 
                       size="sm"
-                      onClick={() => handleEdit(crew)}
+                      onClick={() => handleAssign(crew)}
                     >
-                      <Icon name="UserPlus" size={16} className="mr-1" />
+                      <Icon name="Send" size={16} className="mr-1" />
                       Назначить
                     </Button>
                   )}
@@ -447,6 +488,69 @@ const CrewsTab = () => {
             </Button>
             <Button onClick={handleSaveManage}>
               Сохранить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={assignDialog.open} onOpenChange={(open) => setAssignDialog({ open, crew: null })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Назначить экипаж {assignDialog.crew?.unitName} на вызов</DialogTitle>
+            <DialogDescription>
+              Выберите вызов для назначения экипажа
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {pendingCalls.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Icon name="FileX" size={48} className="mx-auto mb-3 opacity-50" />
+                <p>Нет ожидающих вызовов</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Активные вызовы ({pendingCalls.length})</Label>
+                <div className="space-y-2 max-h-96 overflow-y-auto border rounded-lg p-3">
+                  {pendingCalls.map(call => {
+                    const priorityConfig = getPriorityConfig(call.priority);
+                    return (
+                      <div
+                        key={call.id}
+                        onClick={() => setSelectedCallId(call.id)}
+                        className={`p-3 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                          selectedCallId === call.id ? 'border-primary bg-primary/5' : 'border-border'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="font-mono">
+                              {call.id}
+                            </Badge>
+                            <Badge className={priorityConfig.color}>
+                              {priorityConfig.label}
+                            </Badge>
+                          </div>
+                          <span className="text-sm text-muted-foreground">{call.time}</span>
+                        </div>
+                        <p className="font-medium mb-1">{call.type}</p>
+                        <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <Icon name="MapPin" size={14} className="mt-0.5" />
+                          <span>{call.address}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignDialog({ open: false, crew: null })}>
+              Отмена
+            </Button>
+            <Button onClick={handleAssignToCall} disabled={!selectedCallId}>
+              <Icon name="Send" size={16} className="mr-2" />
+              Назначить
             </Button>
           </DialogFooter>
         </DialogContent>
