@@ -9,7 +9,7 @@ export const canEditDispatchers = (user: User | null): boolean => {
 };
 
 export const canManageAccounts = (user: User | null): boolean => {
-  return user?.role === 'manager';
+  return user?.role === 'manager' || user?.role === 'supervisor';
 };
 
 export const isManager = (user: User | null): boolean => {
@@ -18,4 +18,12 @@ export const isManager = (user: User | null): boolean => {
 
 export const isDispatcher = (user: User | null): boolean => {
   return user?.role === 'dispatcher';
+};
+
+export const isSupervisor = (user: User | null): boolean => {
+  return user?.role === 'supervisor';
+};
+
+export const isEmployee = (user: User | null): boolean => {
+  return user?.role === 'employee';
 };

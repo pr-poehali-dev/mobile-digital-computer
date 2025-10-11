@@ -12,7 +12,7 @@ interface LoginPageProps {
 }
 
 const LoginPage = ({ onLogin }: LoginPageProps) => {
-  const [username, setUsername] = useState('');
+  const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -23,7 +23,7 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
     setIsLoading(true);
 
     try {
-      const result = await authenticate(username, password);
+      const result = await authenticate(userId, password);
       
       if (result.success && result.user) {
         saveUserSession(result.user);
@@ -64,14 +64,16 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
             )}
             
             <div className="space-y-2">
-              <Label htmlFor="username">Логин</Label>
+              <Label htmlFor="userId">ID сотрудника</Label>
               <Input
-                id="username"
+                id="userId"
                 type="text"
-                placeholder="Введите логин"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Введите ID (5 цифр)"
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
                 disabled={isLoading}
+                maxLength={5}
+                pattern="[0-9]{5}"
                 required
               />
             </div>
@@ -103,8 +105,10 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
             
             <div className="mt-4 p-3 bg-muted rounded-lg text-xs text-muted-foreground">
               <p className="font-medium mb-1">Тестовые аккаунты:</p>
-              <p>Менеджер: manager / Manager2024!</p>
-              <p>Диспетчер: dispatcher / Disp2024!</p>
+              <p>Менеджер: 10001 / Admin2024!</p>
+              <p>Диспетчер: 10002 / Disp2024!</p>
+              <p>Руководитель: 10003 / Super2024!</p>
+              <p>Сотрудник: 10004 / Emp2024!</p>
             </div>
           </form>
         </CardContent>

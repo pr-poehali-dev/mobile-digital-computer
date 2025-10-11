@@ -41,7 +41,10 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
                   <p className="text-sm font-medium text-sidebar-foreground">{currentUser.fullName}</p>
                   <div className="flex items-center justify-end gap-2">
                     <Badge variant="outline" className="text-xs">
-                      {currentUser.role === 'manager' ? 'Менеджер' : 'Диспетчер'}
+                      {currentUser.role === 'manager' && 'Менеджер'}
+                      {currentUser.role === 'dispatcher' && 'Диспетчер'}
+                      {currentUser.role === 'supervisor' && 'Руководитель'}
+                      {currentUser.role === 'employee' && 'Сотрудник'}
                     </Badge>
                     <span className="text-xs text-sidebar-foreground/70">ID: {currentUser.id}</span>
                   </div>

@@ -17,17 +17,38 @@ interface AccountsTabProps {
   currentUser: User | null;
 }
 
+const getRoleLabel = (role: string) => {
+  switch (role) {
+    case 'manager': return 'Менеджер';
+    case 'dispatcher': return 'Диспетчер';
+    case 'supervisor': return 'Руководитель';
+    case 'employee': return 'Сотрудник';
+    default: return role;
+  }
+};
+
+const getRoleBadgeVariant = (role: string) => {
+  switch (role) {
+    case 'manager': return 'default';
+    case 'supervisor': return 'default';
+    case 'dispatcher': return 'secondary';
+    case 'employee': return 'outline';
+    default: return 'outline';
+  }
+};
+
 const AccountsTab = ({ currentUser }: AccountsTabProps) => {
   const [users, setUsers] = useState<User[]>([]);
   const [editDialog, setEditDialog] = useState<{ open: boolean; user: User | null }>({ open: false, user: null });
   const [createDialog, setCreateDialog] = useState(false);
-  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; userId: number | null }>({ open: false, userId: null });
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; userId: string | null }>({ open: false, userId: null });
   const [formData, setFormData] = useState({
-    username: '',
+    userId: '',
+    password: '',
     fullName: '',
     email: '',
     phone: '',
-    role: 'dispatcher' as 'manager' | 'dispatcher'
+    role: 'employee' as User['role']
   });
   const { toast } = useToast();
 
@@ -41,29 +62,36 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
 
   const handleEdit = (user: User) => {
     setFormData({
-      username: user.username,
+      userId: user.id,
+      password: '',
       fullName: user.fullName,
       email: user.email,
       phone: user.phone,
-      role: user.role as 'manager' | 'dispatcher'
+      role: user.role
     });
     setEditDialog({ open: true, user });
   };
 
   const handleCreate = () => {
     setFormData({
-      username: '',
+      userId: '',
+      password: '',
       fullName: '',
       email: '',
       phone: '',
-      role: 'dispatcher'
+      role: 'employee'
     });
     setCreateDialog(true);
   };
 
   const handleSaveEdit = () => {
     if (editDialog.user) {
-      updateUser(editDialog.user.id, formData);
+      updateUser(editDialog.user.id, {
+        fullName: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+        role: formData.role
+      });
       loadUsers();
       setEditDialog({ open: false, user: null });
       toast({
@@ -74,16 +102,62 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
   };
 
   const handleSaveCreate = () => {
-    createUser(formData);
+    if (!formData.userId || formData.userId.length !== 5) {
+      toast({
+        title: 'Ошибка',
+        description: 'ID должен содержать ровно 5 цифр',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!formData.password || formData.password.length < 6) {
+      toast({
+        title: 'Ошибка',
+        description: 'Пароль должен быть не менее 6 символов',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const existingUser = users.find(u => u.id === formData.userId);
+    if (existingUser) {
+      toast({
+        title: 'Ошибка',
+        description: 'Пользователь с таким ID уже существует',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    createUser(formData.userId, formData.password, {
+      fullName: formData.fullName,
+      email: formData.email,
+      phone: formData.phone,
+      role: formData.role
+    });
+
+    const usersData = localStorage.getItem('mdc_users');
+    const users = usersData ? JSON.parse(usersData) : [];
+    users.push({
+      id: formData.userId,
+      password: formData.password,
+      fullName: formData.fullName,
+      email: formData.email,
+      phone: formData.phone,
+      role: formData.role
+    });
+    localStorage.setItem('mdc_users', JSON.stringify(users));
+
     loadUsers();
     setCreateDialog(false);
     toast({
       title: 'Аккаунт создан',
-      description: `Пользователь ${formData.fullName} успешно добавлен`,
+      description: `Пользователь ${formData.fullName} с ID ${formData.userId} успешно добавлен`,
     });
   };
 
-  const handleDelete = (userId: number) => {
+  const handleDelete = (userId: string) => {
     if (userId === currentUser?.id) {
       toast({
         title: 'Ошибка',
@@ -92,7 +166,16 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
       });
       return;
     }
+
     deleteUser(userId);
+
+    const usersData = localStorage.getItem('mdc_users');
+    if (usersData) {
+      const users = JSON.parse(usersData);
+      const filtered = users.filter((u: any) => u.id !== userId);
+      localStorage.setItem('mdc_users', JSON.stringify(filtered));
+    }
+
     loadUsers();
     setDeleteDialog({ open: false, userId: null });
     toast({
@@ -101,11 +184,20 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
     });
   };
 
-  const getRoleBadge = (role: string) => {
-    return role === 'manager' 
-      ? <Badge variant="default">Менеджер</Badge>
-      : <Badge variant="secondary">Диспетчер</Badge>;
-  };
+  const canManageUsers = currentUser?.role === 'manager' || currentUser?.role === 'supervisor';
+
+  if (!canManageUsers) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Доступ ограничен</CardTitle>
+          <CardDescription>
+            У вас нет прав для просмотра этого раздела
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -114,88 +206,184 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Управление аккаунтами</CardTitle>
-              <CardDescription>Добавляйте, редактируйте и удаляйте учетные записи пользователей</CardDescription>
+              <CardDescription>Создание и редактирование пользователей системы</CardDescription>
             </div>
             <Button onClick={handleCreate}>
-              <Icon name="UserPlus" size={16} className="mr-2" />
+              <Icon name="UserPlus" size={18} className="mr-2" />
               Создать аккаунт
             </Button>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>ФИО</TableHead>
-                  <TableHead>Логин</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Телефон</TableHead>
-                  <TableHead>Роль</TableHead>
-                  <TableHead></TableHead>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead>ФИО</TableHead>
+                <TableHead>Роль</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Телефон</TableHead>
+                <TableHead className="text-right">Действия</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-mono">{user.id}</TableCell>
+                  <TableCell className="font-medium">{user.fullName}</TableCell>
+                  <TableCell>
+                    <Badge variant={getRoleBadgeVariant(user.role) as any}>
+                      {getRoleLabel(user.role)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                  <TableCell className="text-muted-foreground">{user.phone}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(user)}>
+                        <Icon name="Edit" size={16} />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => setDeleteDialog({ open: true, userId: user.id })}
+                        disabled={user.id === currentUser?.id}
+                      >
+                        <Icon name="Trash2" size={16} className="text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.id}</TableCell>
-                    <TableCell>{user.fullName}</TableCell>
-                    <TableCell>{user.username}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.phone}</TableCell>
-                    <TableCell>{getRoleBadge(user.role)}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleEdit(user)}
-                        >
-                          <Icon name="Pencil" size={16} />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => setDeleteDialog({ open: true, userId: user.id })}
-                          disabled={user.id === currentUser?.id}
-                        >
-                          <Icon name="Trash2" size={16} className="text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={createDialog} onOpenChange={setCreateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Создать новый аккаунт</DialogTitle>
+            <DialogDescription>
+              Укажите ID, пароль и данные нового пользователя
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="userId">ID пользователя *</Label>
+              <Input
+                id="userId"
+                value={formData.userId}
+                onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
+                placeholder="Например: 10005"
+                maxLength={5}
+                pattern="[0-9]{5}"
+              />
+              <p className="text-xs text-muted-foreground">Ровно 5 цифр</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Пароль *</Label>
+              <Input
+                id="password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="Минимум 6 символов"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="fullName">ФИО *</Label>
+              <Input
+                id="fullName"
+                value={formData.fullName}
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                placeholder="Иванов Иван Иванович"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="role">Роль</Label>
+              <Select value={formData.role} onValueChange={(value: User['role']) => setFormData({ ...formData, role: value })}>
+                <SelectTrigger id="role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {currentUser?.role === 'manager' && (
+                    <>
+                      <SelectItem value="manager">Менеджер</SelectItem>
+                      <SelectItem value="supervisor">Руководитель</SelectItem>
+                    </>
+                  )}
+                  <SelectItem value="dispatcher">Диспетчер</SelectItem>
+                  <SelectItem value="employee">Сотрудник</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="user@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Телефон</Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="+7 (999) 123-45-67"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateDialog(false)}>
+              Отмена
+            </Button>
+            <Button onClick={handleSaveCreate}>
+              Создать
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={editDialog.open} onOpenChange={(open) => setEditDialog({ open, user: null })}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Редактировать аккаунт</DialogTitle>
             <DialogDescription>
-              Измените данные пользователя {editDialog.user?.fullName}
+              ID: {editDialog.user?.id}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-username">Логин</Label>
+              <Label htmlFor="edit-fullName">ФИО</Label>
               <Input
-                id="edit-username"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                id="edit-fullName"
+                value={formData.fullName}
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                placeholder="Иванов Иван Иванович"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-fullname">ФИО</Label>
-              <Input
-                id="edit-fullname"
-                value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-              />
+              <Label htmlFor="edit-role">Роль</Label>
+              <Select value={formData.role} onValueChange={(value: User['role']) => setFormData({ ...formData, role: value })}>
+                <SelectTrigger id="edit-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {currentUser?.role === 'manager' && (
+                    <>
+                      <SelectItem value="manager">Менеджер</SelectItem>
+                      <SelectItem value="supervisor">Руководитель</SelectItem>
+                    </>
+                  )}
+                  <SelectItem value="dispatcher">Диспетчер</SelectItem>
+                  <SelectItem value="employee">Сотрудник</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-email">Email</Label>
@@ -214,18 +402,6 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-role">Роль</Label>
-              <Select value={formData.role} onValueChange={(value: 'manager' | 'dispatcher') => setFormData({ ...formData, role: value })}>
-                <SelectTrigger id="edit-role">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="dispatcher">Диспетчер</SelectItem>
-                  <SelectItem value="manager">Менеджер</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialog({ open: false, user: null })}>
@@ -238,90 +414,17 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={createDialog} onOpenChange={setCreateDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Создать аккаунт</DialogTitle>
-            <DialogDescription>
-              Добавьте нового пользователя в систему
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="create-username">Логин</Label>
-              <Input
-                id="create-username"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                placeholder="dispatcher2"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="create-fullname">ФИО</Label>
-              <Input
-                id="create-fullname"
-                value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                placeholder="Сидоров Сидор Сидорович"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="create-email">Email</Label>
-              <Input
-                id="create-email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="user@mdc.system"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="create-phone">Телефон</Label>
-              <Input
-                id="create-phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+7 (999) 888-77-66"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="create-role">Роль</Label>
-              <Select value={formData.role} onValueChange={(value: 'manager' | 'dispatcher') => setFormData({ ...formData, role: value })}>
-                <SelectTrigger id="create-role">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="dispatcher">Диспетчер</SelectItem>
-                  <SelectItem value="manager">Менеджер</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateDialog(false)}>
-              Отмена
-            </Button>
-            <Button onClick={handleSaveCreate}>
-              Создать
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, userId: null })}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Удалить аккаунт?</AlertDialogTitle>
             <AlertDialogDescription>
-              Вы уверены, что хотите удалить этот аккаунт? Это действие нельзя отменить.
+              Это действие нельзя будет отменить. Пользователь будет удален из системы.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Отмена</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => deleteDialog.userId && handleDelete(deleteDialog.userId)}
-              className="bg-destructive hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={() => deleteDialog.userId && handleDelete(deleteDialog.userId)}>
               Удалить
             </AlertDialogAction>
           </AlertDialogFooter>
