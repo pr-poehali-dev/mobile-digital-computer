@@ -239,7 +239,7 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
           )}
 
           <TabsContent value="settings" className="space-y-4">
-            <SettingsTab />
+            <SettingsTab currentUser={currentUser} />
           </TabsContent>
         </Tabs>
       </main>

@@ -5,28 +5,33 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
+import { type User } from '@/lib/auth';
 
-const SettingsTab = () => {
+interface SettingsTabProps {
+  currentUser: User | null;
+}
+
+const SettingsTab = ({ currentUser }: SettingsTabProps) => {
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Профиль диспетчера</CardTitle>
+          <CardTitle>Профиль пользователя</CardTitle>
           <CardDescription>Управление учетной записью и персональными данными</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="dispatcher-id">ID диспетчера</Label>
-              <Input id="dispatcher-id" value="10245" disabled />
+              <Label htmlFor="user-id">ID</Label>
+              <Input id="user-id" value={currentUser?.id || ''} disabled />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dispatcher-name">ФИО</Label>
-              <Input id="dispatcher-name" placeholder="Иванов Иван Иванович" />
+              <Label htmlFor="user-name">ФИО</Label>
+              <Input id="user-name" value={currentUser?.fullName || ''} placeholder="Иванов Иван Иванович" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="dispatcher@example.com" />
+              <Input id="email" type="email" value={currentUser?.email || ''} placeholder="user@example.com" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Телефон</Label>
