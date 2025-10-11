@@ -119,7 +119,7 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
   };
 
   const handleMdtSystemToggle = (checked: boolean) => {
-    if (checked && survSystemEnabled) {
+    if (!checked && survSystemEnabled) {
       toast({
         title: 'Невозможно включить МДТ',
         description: 'Сначала отключите СУРВ систему',
@@ -361,7 +361,6 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
                   checked={mdtSystemDisabled} 
                   onCheckedChange={handleMdtSystemToggle}
                   className="data-[state=checked]:bg-destructive"
-                  disabled={survSystemEnabled}
                 />
               </div>
 
@@ -461,7 +460,6 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
                   checked={survSystemEnabled} 
                   onCheckedChange={handleSurvSystemToggle}
                   className="data-[state=checked]:bg-success"
-                  disabled={mdtSystemDisabled}
                 />
               </div>
 
