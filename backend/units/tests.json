@@ -15,7 +15,7 @@
       "method": "POST",
       "path": "/",
       "body": {
-        "unitName": "Test-Unit-New",
+        "unitName": "{{timestamp}}-Test",
         "status": "available",
         "location": "Test Location",
         "members": ["Тестовый сотрудник"]

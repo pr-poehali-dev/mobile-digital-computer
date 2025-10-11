@@ -18,7 +18,8 @@ export const fetchUnits = async (): Promise<Crew[]> => {
     });
     
     if (!response.ok) {
-      console.error('Failed to fetch units:', response.statusText);
+      const text = await response.text();
+      console.error('Failed to fetch units:', response.status, response.statusText, text);
       return [];
     }
     
@@ -26,6 +27,9 @@ export const fetchUnits = async (): Promise<Crew[]> => {
     return data.units || [];
   } catch (error) {
     console.error('Error fetching units:', error);
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      console.error('Fetch error:', error.message, 'for', UNITS_API_URL);
+    }
     return [];
   }
 };

@@ -29,9 +29,17 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     dsn = os.environ.get('DATABASE_URL')
     schema = 't_p48049793_mobile_digital_compu'
     
-    conn = psycopg2.connect(dsn)
-    conn.autocommit = True
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        conn = psycopg2.connect(dsn)
+        conn.autocommit = True
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'DB connection error: {str(e)}'}),
+            'isBase64Encoded': False
+        }
     
     try:
         if method == 'GET':
@@ -123,6 +131,13 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'isBase64Encoded': False
             }
     
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': str(e)}),
+            'isBase64Encoded': False
+        }
     finally:
         cur.close()
         conn.close()
