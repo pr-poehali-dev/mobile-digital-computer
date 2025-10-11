@@ -303,6 +303,9 @@ export const addOnlineUser = (user: User): void => {
   const exists = online.find(u => u.id === user.id);
   if (!exists) {
     localStorage.setItem(onlineKey, JSON.stringify([...online, user]));
+    localStorage.setItem('mdc_online_users_timestamp', Date.now().toString());
+    console.log('User went online:', user.fullName);
+    window.dispatchEvent(new CustomEvent('online_users_changed'));
   }
 };
 
@@ -311,6 +314,9 @@ export const removeOnlineUser = (userId: string): void => {
   const online = getOnlineUsers();
   const filtered = online.filter(u => u.id !== userId);
   localStorage.setItem(onlineKey, JSON.stringify(filtered));
+  localStorage.setItem('mdc_online_users_timestamp', Date.now().toString());
+  console.log('User went offline:', userId);
+  window.dispatchEvent(new CustomEvent('online_users_changed'));
 };
 
 export const getAvailableCrewMembers = (): User[] => {

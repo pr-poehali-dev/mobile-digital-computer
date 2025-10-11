@@ -128,7 +128,8 @@ const CrewsTab = () => {
     loadAvailableUsers();
 
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'mdc_online_users' || e.key === 'mdc_crews') {
+      if (e.key === 'mdc_online_users' || e.key === 'mdc_crews' || e.key === 'mdc_online_users_timestamp') {
+        console.log('Storage change detected:', e.key);
         loadCrews();
         loadAvailableUsers();
       }
@@ -138,8 +139,14 @@ const CrewsTab = () => {
       loadCrews();
     };
 
+    const handleOnlineUsersUpdate = () => {
+      console.log('Online users changed event received');
+      loadAvailableUsers();
+    };
+
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('crews_updated', handleCrewsUpdate);
+    window.addEventListener('online_users_changed', handleOnlineUsersUpdate);
     
     const interval = setInterval(() => {
       loadCrews();
@@ -149,6 +156,7 @@ const CrewsTab = () => {
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('crews_updated', handleCrewsUpdate);
+      window.removeEventListener('online_users_changed', handleOnlineUsersUpdate);
       clearInterval(interval);
     };
   }, []);
@@ -164,7 +172,9 @@ const CrewsTab = () => {
   };
 
   const loadAvailableUsers = () => {
-    setAvailableUsers(getAvailableCrewMembers());
+    const users = getAvailableCrewMembers();
+    console.log('CrewsTab - Loading available users:', users);
+    setAvailableUsers(users);
   };
 
   const handleEdit = (crew: Crew) => {
