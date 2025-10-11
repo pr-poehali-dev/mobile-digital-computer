@@ -176,6 +176,7 @@ const storage = {
       [KEYS.SYSTEM_LOCKDOWN]: 'system_lockdown_changed',
       [KEYS.SYSTEM_RESTRICTIONS]: 'system_restrictions_changed',
       [KEYS.USER_SETTINGS]: 'user_settings_changed',
+      [KEYS.SHIFT_STATISTICS]: 'shift_statistics_updated',
     };
     
     const eventType = eventMap[key];
@@ -1311,9 +1312,34 @@ export const startBreak = (userId: string): void => {
   if (session.status === 'on-shift' && session.currentSessionStart) {
     const workDuration = new Date(now).getTime() - new Date(session.currentSessionStart).getTime();
     session.totalWorkTime += workDuration;
+    
+    saveSessionToStatistics(userId, session, 'work', session.currentSessionStart, now, workDuration);
   }
   
   session.status = 'on-break';
+  session.currentSessionStart = now;
+  session.lastHeartbeat = now;
+  
+  storage.set(KEYS.SHIFT_SESSIONS, sessions);
+  syncManager.notify('shift_sessions_updated');
+};
+
+export const resumeShift = (userId: string): void => {
+  const sessions = storage.get<ShiftSession[]>(KEYS.SHIFT_SESSIONS, []);
+  const session = sessions.find(s => s.userId === userId);
+  
+  if (!session) return;
+  
+  const now = new Date().toISOString();
+  
+  if (session.status === 'on-break' && session.currentSessionStart) {
+    const breakDuration = new Date(now).getTime() - new Date(session.currentSessionStart).getTime();
+    session.totalBreakTime += breakDuration;
+    
+    saveSessionToStatistics(userId, session, 'break', session.currentSessionStart, now, breakDuration);
+  }
+  
+  session.status = 'on-shift';
   session.currentSessionStart = now;
   session.lastHeartbeat = now;
   
@@ -1332,17 +1358,17 @@ export const endShift = (userId: string): void => {
   if (session.status === 'on-shift' && session.currentSessionStart) {
     const workDuration = new Date(now).getTime() - new Date(session.currentSessionStart).getTime();
     session.totalWorkTime += workDuration;
+    saveSessionToStatistics(userId, session, 'work', session.currentSessionStart, now, workDuration);
   } else if (session.status === 'on-break' && session.currentSessionStart) {
     const breakDuration = new Date(now).getTime() - new Date(session.currentSessionStart).getTime();
     session.totalBreakTime += breakDuration;
+    saveSessionToStatistics(userId, session, 'break', session.currentSessionStart, now, breakDuration);
   }
   
   session.status = 'off-shift';
   session.endTime = now;
   session.currentSessionStart = undefined;
   session.lastHeartbeat = now;
-  
-  saveShiftStatistics(session);
   
   const updatedSessions = sessions.filter(s => s.userId !== userId);
   storage.set(KEYS.SHIFT_SESSIONS, updatedSessions);
@@ -1372,6 +1398,41 @@ export const checkInactiveSessions = (): void => {
       }
     }
   });
+};
+
+const saveSessionToStatistics = (userId: string, session: ShiftSession, status: 'work' | 'break', startTime: string, endTime: string, duration: number): void => {
+  const allStats = storage.get<ShiftStatistics[]>(KEYS.SHIFT_STATISTICS, []);
+  const date = new Date(startTime).toISOString().split('T')[0];
+  
+  const existingStatIndex = allStats.findIndex(s => s.userId === userId && s.date === date);
+  
+  const sessionRecord = {
+    status,
+    startTime,
+    endTime,
+    duration
+  };
+  
+  if (existingStatIndex >= 0) {
+    if (status === 'work') {
+      allStats[existingStatIndex].totalWorkTime += duration;
+    } else {
+      allStats[existingStatIndex].totalBreakTime += duration;
+    }
+    allStats[existingStatIndex].sessions.push(sessionRecord);
+  } else {
+    const newStat: ShiftStatistics = {
+      userId,
+      date,
+      totalWorkTime: status === 'work' ? duration : 0,
+      totalBreakTime: status === 'break' ? duration : 0,
+      sessions: [sessionRecord]
+    };
+    allStats.push(newStat);
+  }
+  
+  storage.set(KEYS.SHIFT_STATISTICS, allStats);
+  syncManager.notify('shift_statistics_updated');
 };
 
 const saveShiftStatistics = (session: ShiftSession): void => {

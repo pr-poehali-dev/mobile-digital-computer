@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import StatisticsTab from '@/components/tabs/StatisticsTab';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import { type User } from '@/lib/auth';
-import { getUserShiftSession, startShift, startBreak, endShift, updateShiftHeartbeat, type ShiftSession } from '@/lib/store';
+import { getUserShiftSession, startShift, startBreak, resumeShift, endShift, updateShiftHeartbeat, type ShiftSession } from '@/lib/store';
 import { useSync } from '@/hooks/use-sync';
 import { useToast } from '@/hooks/use-toast';
 
 interface ShiftControlsProps {
   currentUser: User;
+  showStatistics?: boolean;
 }
 
-const ShiftControls = ({ currentUser }: ShiftControlsProps) => {
+const ShiftControls = ({ currentUser, showStatistics = false }: ShiftControlsProps) => {
   const [session, setSession] = useState<ShiftSession | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const { toast } = useToast();
@@ -71,8 +73,17 @@ const ShiftControls = ({ currentUser }: ShiftControlsProps) => {
     startBreak(currentUser.id);
     toast({
       title: 'Перерыв начат',
-      description: 'Время перерыва начало учитываться',
+      description: 'Время работы сохранено. Перерыв начался.',
       className: 'bg-warning text-white'
+    });
+  };
+
+  const handleResumeShift = () => {
+    resumeShift(currentUser.id);
+    toast({
+      title: 'Возврат на смену',
+      description: 'Время перерыва сохранено. Смена возобновлена.',
+      className: 'bg-success text-white'
     });
   };
 
@@ -141,16 +152,29 @@ const ShiftControls = ({ currentUser }: ShiftControlsProps) => {
             Начать смену
           </Button>
 
-          <Button
-            size="lg"
-            variant="outline"
-            onClick={handleStartBreak}
-            disabled={!isOnShift}
-            className="h-14"
-          >
-            <Icon name="Coffee" size={20} className="mr-2" />
-            Перерыв
-          </Button>
+          {isOnShift && (
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={handleStartBreak}
+              className="h-14"
+            >
+              <Icon name="Coffee" size={20} className="mr-2" />
+              Перерыв
+            </Button>
+          )}
+
+          {isOnBreak && (
+            <Button
+              size="lg"
+              variant="default"
+              onClick={handleResumeShift}
+              className="h-14"
+            >
+              <Icon name="Play" size={20} className="mr-2" />
+              Вернуться на смену
+            </Button>
+          )}
 
           <Button
             size="lg"
@@ -172,6 +196,15 @@ const ShiftControls = ({ currentUser }: ShiftControlsProps) => {
           </div>
         )}
       </CardContent>
+
+      {showStatistics && (
+        <CardContent className="pt-0">
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-semibold mb-3">Моя статистика</h3>
+            <StatisticsTab currentUser={currentUser} canViewAllStats={false} />
+          </div>
+        </CardContent>
+      )}
     </Card>
   );
 };

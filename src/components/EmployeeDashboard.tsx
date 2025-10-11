@@ -280,7 +280,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
             </div>
             {survSystemEnabled && (
               <div className="lg:col-span-1">
-                <ShiftControls currentUser={currentUser} />
+                <ShiftControls currentUser={currentUser} showStatistics={true} />
               </div>
             )}
           </div>
@@ -430,7 +430,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
             </Card>
 
             {survSystemEnabled && (
-              <ShiftControls currentUser={currentUser} />
+              <ShiftControls currentUser={currentUser} showStatistics={true} />
             )}
           </div>
 
