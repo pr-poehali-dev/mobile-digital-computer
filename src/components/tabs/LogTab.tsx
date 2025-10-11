@@ -39,6 +39,8 @@ const LogTab = ({ currentUser }: LogTabProps) => {
   const { toast } = useToast();
   const isManager = currentUser?.role === 'manager';
 
+  console.log('LogTab - currentUser:', currentUser, 'isManager:', isManager);
+
   const loadLogs = () => {
     setLogs(getActivityLogs());
   };
@@ -98,6 +100,13 @@ const LogTab = ({ currentUser }: LogTabProps) => {
 
   return (
     <div className="space-y-6">
+      {/* DEBUG: показываем для отладки */}
+      {currentUser && (
+        <div className="p-4 bg-muted rounded text-sm">
+          Пользователь: {currentUser.fullName} | Роль: {currentUser.role} | Менеджер: {isManager ? 'ДА' : 'НЕТ'}
+        </div>
+      )}
+      
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-4">
