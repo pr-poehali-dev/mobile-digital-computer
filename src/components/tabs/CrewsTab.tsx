@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import Icon from "@/components/ui/icon";
 import {
   getCrews,
-  syncCrewsFromAPI,
   updateCrewStatus,
   createCrew,
   updateCrew,
@@ -65,8 +64,7 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
 
   useSync(['crews_updated', 'online_users_changed', 'calls_updated'], loadAll, 2000);
 
-  const loadCrews = async () => {
-    await syncCrewsFromAPI();
+  const loadCrews = () => {
     setCrews(getCrews());
   };
 

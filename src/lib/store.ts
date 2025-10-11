@@ -1,5 +1,4 @@
 import { type User } from './auth';
-import { fetchUnits, createUnitAPI, updateUnitAPI, deleteUnitAPI } from './units-api';
 import { syncManager } from './sync-manager';
 
 // ============================================================================
@@ -325,27 +324,8 @@ export const changeUserId = (oldUserId: string, newUserId: string): boolean => {
 };
 
 // ============================================================================
-// CREWS API
+// CREWS STORAGE (TEMPORARY LOCAL MODE)
 // ============================================================================
-
-let isSyncing = false;
-
-export const syncCrewsFromAPI = async (): Promise<void> => {
-  if (isSyncing) return;
-  
-  isSyncing = true;
-  try {
-    const units = await fetchUnits();
-    if (units && units.length >= 0) {
-      storage.set(KEYS.CREWS, units);
-      syncManager.notify('crews_updated');
-    }
-  } catch (err) {
-    console.error('Error syncing units from API:', err);
-  } finally {
-    isSyncing = false;
-  }
-};
 
 export const getCrews = (): Crew[] => {
   return storage.get<Crew[]>(KEYS.CREWS, []);
@@ -357,108 +337,105 @@ export const saveCrews = (crews: Crew[]): void => {
 };
 
 export const createCrew = async (unitName: string, members: string[], creatorId?: string): Promise<Crew | null> => {
-  const newUnit: Omit<Crew, 'id' | 'lastUpdate'> = {
+  const crews = getCrews();
+  const newId = crews.length > 0 ? Math.max(...crews.map(c => c.id)) + 1 : 1;
+  
+  const newCrew: Crew = {
+    id: newId,
     unitName,
     status: 'available',
     location: 'Станция',
-    members
+    members,
+    lastUpdate: new Date().toISOString()
   };
   
-  const newId = await createUnitAPI(newUnit);
+  storage.set(KEYS.CREWS, [...crews, newCrew]);
+  syncManager.notify('crews_updated');
   
-  if (newId) {
-    await syncCrewsFromAPI();
-    
-    if (creatorId) {
-      const users = getAllUsers();
-      const user = users.find(u => u.id === creatorId);
-      addActivityLog({
-        type: 'crew_created',
-        userId: creatorId,
-        userName: user?.fullName || 'Неизвестный',
-        crewId: newId,
-        crewName: unitName,
-        description: `Создан экипаж ${unitName}`,
-        details: `Состав: ${members.length} чел.`
-      });
-    }
-    
-    const crews = getCrews();
-    return crews.find(c => c.id === newId) || null;
+  if (creatorId) {
+    const users = getAllUsers();
+    const user = users.find(u => u.id === creatorId);
+    addActivityLog({
+      type: 'crew_created',
+      userId: creatorId,
+      userName: user?.fullName || 'Неизвестный',
+      crewId: newId,
+      crewName: unitName,
+      description: `Создан экипаж ${unitName}`,
+      details: `Состав: ${members.length} чел.`
+    });
   }
   
-  return null;
+  return newCrew;
 };
 
 export const updateCrew = async (crewId: number, unitName: string, members: string[]): Promise<void> => {
-  const units = storage.get<Crew[]>(KEYS.CREWS, []);
-  const unit = units.find(u => u.id === crewId);
+  const crews = getCrews();
+  const updatedCrews = crews.map(crew => 
+    crew.id === crewId 
+      ? { ...crew, unitName, members, lastUpdate: new Date().toISOString() }
+      : crew
+  );
   
-  if (unit) {
-    const updatedUnit = { ...unit, unitName, members, lastUpdate: new Date().toISOString() };
-    await updateUnitAPI(updatedUnit);
-    await syncCrewsFromAPI();
-  }
+  storage.set(KEYS.CREWS, updatedCrews);
+  syncManager.notify('crews_updated');
 };
 
 export const updateCrewStatus = async (crewId: number, status: Crew['status'], location?: string, userId?: string): Promise<void> => {
-  const units = storage.get<Crew[]>(KEYS.CREWS, []);
-  const unit = units.find(u => u.id === crewId);
+  const crews = getCrews();
+  const crew = crews.find(c => c.id === crewId);
   
-  if (unit) {
-    const updatedUnit = { 
-      ...unit, 
-      status, 
-      location: location || unit.location, 
-      lastUpdate: new Date().toISOString() 
-    };
+  if (crew) {
+    const updatedCrews = crews.map(c => 
+      c.id === crewId
+        ? { ...c, status, location: location || c.location, lastUpdate: new Date().toISOString() }
+        : c
+    );
     
-    await updateUnitAPI(updatedUnit);
-    await syncCrewsFromAPI();
-  }
-  
-  if (unit && userId) {
-    const users = getAllUsers();
-    const user = users.find(u => u.id === userId);
-    const statusLabels = { 
-      available: 'Доступен', 
-      'en-route': 'В пути', 
-      'on-scene': 'На месте', 
-      unavailable: 'Недоступен' 
-    };
-    addActivityLog({
-      type: 'crew_status',
-      userId,
-      userName: user?.fullName || 'Неизвестный',
-      crewId,
-      crewName: unit.unitName,
-      description: `Статус экипажа изменен на: ${statusLabels[status]}`,
-      details: location || undefined
-    });
+    storage.set(KEYS.CREWS, updatedCrews);
+    syncManager.notify('crews_updated');
+    
+    if (userId) {
+      const users = getAllUsers();
+      const user = users.find(u => u.id === userId);
+      const statusLabels = { 
+        available: 'Доступен', 
+        'en-route': 'В пути', 
+        'on-scene': 'На месте', 
+        unavailable: 'Недоступен' 
+      };
+      addActivityLog({
+        type: 'crew_status',
+        userId,
+        userName: user?.fullName || 'Неизвестный',
+        crewId,
+        crewName: crew.unitName,
+        description: `Статус экипажа изменен на: ${statusLabels[status]}`,
+        details: location || undefined
+      });
+    }
   }
 };
 
 export const deleteCrew = async (crewId: number, userId?: string): Promise<void> => {
-  const units = storage.get<Crew[]>(KEYS.CREWS, []);
-  const unit = units.find(u => u.id === crewId);
+  const crews = getCrews();
+  const crew = crews.find(c => c.id === crewId);
   
-  const success = await deleteUnitAPI(crewId);
+  const updatedCrews = crews.filter(c => c.id !== crewId);
+  storage.set(KEYS.CREWS, updatedCrews);
+  syncManager.notify('crews_updated');
   
-  if (success) {
-    await syncCrewsFromAPI();
-    
-    if (unit && userId) {
-      const users = getAllUsers();
-      const user = users.find(u => u.id === userId);
-      addActivityLog({
-        type: 'crew_deleted',
-        userId,
-        userName: user?.fullName || 'Неизвестный',
-        crewId,
-        crewName: unit.unitName,
-        description: `Удален экипаж ${unit.unitName}`,
-      });
-    }
+  if (crew && userId) {
+    const users = getAllUsers();
+    const user = users.find(u => u.id === userId);
+    addActivityLog({
+      type: 'crew_deleted',
+      userId,
+      userName: user?.fullName || 'Неизвестный',
+      crewId,
+      crewName: crew.unitName,
+      description: `Удален экипаж ${crew.unitName}`,
+    });
   }
 };
 
@@ -511,8 +488,8 @@ export const removeOnlineUser = (userId: string): void => {
 
 export const getAvailableCrewMembers = (): User[] => {
   const excludedRoles = ['manager', 'dispatcher', 'supervisor'];
-  const onlineUsers = getOnlineUsers();
-  return onlineUsers.filter(u => !excludedRoles.includes(u.role));
+  const allUsers = getAllUsers();
+  return allUsers.filter(u => !excludedRoles.includes(u.role));
 };
 
 // ============================================================================
@@ -650,24 +627,10 @@ export const getEmployeeStats = (userId: string) => {
 };
 
 // ============================================================================
-// AUTO SYNC - Автоматическая синхронизация с API каждые 3 секунды
+// AUTO SYNC - DISABLED (TEMPORARY LOCAL MODE)
 // ============================================================================
-
-let autoSyncInterval: NodeJS.Timeout | null = null;
-
-const startAutoSync = () => {
-  if (autoSyncInterval) return;
-  
-  syncCrewsFromAPI();
-  
-  autoSyncInterval = setInterval(async () => {
-    await syncCrewsFromAPI();
-  }, 5000);
-};
-
-if (typeof window !== 'undefined') {
-  startAutoSync();
-}
+// Auto sync with API is temporarily disabled due to billing issues
+// Data is stored locally and synced between tabs via BroadcastChannel
 
 // ============================================================================
 // EXPORTS

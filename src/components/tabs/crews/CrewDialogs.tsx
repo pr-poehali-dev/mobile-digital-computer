@@ -174,10 +174,10 @@ const CrewDialogs = ({
               />
             </div>
             <div className="space-y-2">
-              <Label>Сотрудники (доступно: {availableUsers.length}) *</Label>
+              <Label>Сотрудники (всего: {availableUsers.length}) *</Label>
               {availableUsers.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Нет доступных сотрудников для формирования экипажа
+                  Нет сотрудников для формирования экипажа
                 </p>
               ) : (
                 <div className="border rounded-lg p-3 space-y-2 max-h-60 overflow-y-auto">
