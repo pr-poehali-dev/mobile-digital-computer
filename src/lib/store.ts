@@ -38,10 +38,23 @@ export interface DispatcherShift {
   isActive: boolean;
 }
 
+export interface ActivityLog {
+  id: string;
+  timestamp: string;
+  type: 'crew_status' | 'crew_created' | 'crew_deleted' | 'call_assigned' | 'call_completed';
+  userId: string;
+  userName: string;
+  crewId?: number;
+  crewName?: string;
+  description: string;
+  details?: string;
+}
+
 const CALLS_KEY = 'mdc_calls';
 const USERS_KEY = 'mdc_users';
 const CREWS_KEY = 'mdc_crews';
 const DISPATCHER_SHIFTS_KEY = 'mdc_dispatcher_shifts';
+const ACTIVITY_LOG_KEY = 'mdc_activity_log';
 
 const defaultCalls: Call[] = [
   { id: 'C-1024', time: '13:48', address: 'ул. Ленина, 45', type: 'ДТП', priority: 'urgent', status: 'dispatched', assignedUnit: 'NU-12', assignedCrewId: 2, dispatcherId: '10002', dispatcherName: 'Иванов И.И.', createdAt: new Date().toISOString() },
@@ -180,15 +193,31 @@ export const saveCrews = (crews: Crew[]): void => {
   localStorage.setItem(CREWS_KEY, JSON.stringify(crews));
 };
 
-export const updateCrewStatus = (crewId: number, status: Crew['status'], location?: string): void => {
+export const updateCrewStatus = (crewId: number, status: Crew['status'], location?: string, userId?: string): void => {
   const crews = getCrews();
+  const crew = crews.find(c => c.id === crewId);
   const updated = crews.map(c => 
     c.id === crewId ? { ...c, status, location: location || c.location, lastUpdate: new Date().toISOString() } : c
   );
   saveCrews(updated);
+  
+  if (crew && userId) {
+    const users = getAllUsers();
+    const user = users.find(u => u.id === userId);
+    const statusLabels = { available: 'Доступен', 'en-route': 'В пути', 'on-scene': 'На месте', unavailable: 'Недоступен' };
+    addActivityLog({
+      type: 'crew_status',
+      userId,
+      userName: user?.fullName || 'Неизвестный',
+      crewId,
+      crewName: crew.unitName,
+      description: `Статус экипажа изменен на: ${statusLabels[status]}`,
+      details: location || undefined
+    });
+  }
 };
 
-export const createCrew = (unitName: string, members: string[]): Crew => {
+export const createCrew = (unitName: string, members: string[], creatorId?: string): Crew => {
   const crews = getCrews();
   const newId = crews.length > 0 ? Math.max(...crews.map(c => c.id)) + 1 : 1;
   const newCrew: Crew = {
@@ -200,6 +229,21 @@ export const createCrew = (unitName: string, members: string[]): Crew => {
     members
   };
   saveCrews([...crews, newCrew]);
+  
+  if (creatorId) {
+    const users = getAllUsers();
+    const user = users.find(u => u.id === creatorId);
+    addActivityLog({
+      type: 'crew_created',
+      userId: creatorId,
+      userName: user?.fullName || 'Неизвестный',
+      crewId: newId,
+      crewName: unitName,
+      description: `Создан экипаж ${unitName}`,
+      details: `Состав: ${members.length} чел.`
+    });
+  }
+  
   return newCrew;
 };
 
@@ -211,10 +255,24 @@ export const updateCrew = (crewId: number, unitName: string, members: string[]):
   saveCrews(updated);
 };
 
-export const deleteCrew = (crewId: number): void => {
+export const deleteCrew = (crewId: number, userId?: string): void => {
   const crews = getCrews();
+  const crew = crews.find(c => c.id === crewId);
   const filtered = crews.filter(c => c.id !== crewId);
   saveCrews(filtered);
+  
+  if (crew && userId) {
+    const users = getAllUsers();
+    const user = users.find(u => u.id === userId);
+    addActivityLog({
+      type: 'crew_deleted',
+      userId,
+      userName: user?.fullName || 'Неизвестный',
+      crewId,
+      crewName: crew.unitName,
+      description: `Удален экипаж ${crew.unitName}`,
+    });
+  }
 };
 
 export const getOnlineUsers = (): User[] => {
@@ -326,6 +384,7 @@ export const createCall = (call: Omit<Call, 'id' | 'time' | 'createdAt'>): Call 
 
 export const updateCallStatus = (callId: string, status: Call['status']): void => {
   const calls = getCalls();
+  const call = calls.find(c => c.id === callId);
   const updated = calls.map(c => {
     if (c.id === callId) {
       const updates: Partial<Call> = { status };
@@ -337,19 +396,54 @@ export const updateCallStatus = (callId: string, status: Call['status']): void =
     return c;
   });
   saveCalls(updated);
+  
+  if (call && status === 'completed' && call.assignedCrewId) {
+    const crews = getCrews();
+    const crew = crews.find(c => c.id === call.assignedCrewId);
+    if (crew) {
+      crew.members.forEach(memberId => {
+        const users = getAllUsers();
+        const user = users.find(u => u.id === memberId);
+        addActivityLog({
+          type: 'call_completed',
+          userId: memberId,
+          userName: user?.fullName || 'Неизвестный',
+          crewId: crew.id,
+          crewName: crew.unitName,
+          description: `Завершен вызов ${callId}`,
+          details: `${call.type} — ${call.address}`
+        });
+      });
+    }
+  }
 };
 
-export const assignCrewToCall = (callId: string, crewId: number): void => {
+export const assignCrewToCall = (callId: string, crewId: number, dispatcherId?: string): void => {
   const calls = getCalls();
   const crews = getCrews();
   const crew = crews.find(c => c.id === crewId);
+  const call = calls.find(c => c.id === callId);
   
-  if (crew) {
+  if (crew && call) {
     const updated = calls.map(c => 
       c.id === callId ? { ...c, assignedCrewId: crewId, assignedUnit: crew.unitName, status: 'dispatched' as const } : c
     );
     saveCalls(updated);
     updateCrewStatus(crewId, 'en-route');
+    
+    crew.members.forEach(memberId => {
+      const users = getAllUsers();
+      const user = users.find(u => u.id === memberId);
+      addActivityLog({
+        type: 'call_assigned',
+        userId: memberId,
+        userName: user?.fullName || 'Неизвестный',
+        crewId,
+        crewName: crew.unitName,
+        description: `Назначен на вызов ${callId}`,
+        details: `${call.type} — ${call.address}`
+      });
+    });
   }
 };
 
@@ -363,5 +457,63 @@ export const getDispatcherStats = (dispatcherId: string) => {
     activeCalls: dispatcherCalls.filter(c => c.status === 'dispatched').length,
     pendingCalls: dispatcherCalls.filter(c => c.status === 'pending').length,
     urgentCalls: dispatcherCalls.filter(c => c.priority === 'urgent').length,
+  };
+};
+
+export const getActivityLogs = (): ActivityLog[] => {
+  const stored = localStorage.getItem(ACTIVITY_LOG_KEY);
+  if (stored) {
+    try {
+      const logs = JSON.parse(stored);
+      const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+      return logs.filter((log: ActivityLog) => new Date(log.timestamp).getTime() > oneDayAgo);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+export const addActivityLog = (log: Omit<ActivityLog, 'id' | 'timestamp'>): void => {
+  const logs = getActivityLogs();
+  const newLog: ActivityLog = {
+    ...log,
+    id: `LOG-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    timestamp: new Date().toISOString()
+  };
+  logs.unshift(newLog);
+  localStorage.setItem(ACTIVITY_LOG_KEY, JSON.stringify(logs));
+};
+
+export const getUserActivityLogs = (userId: string): ActivityLog[] => {
+  const logs = getActivityLogs();
+  const crews = getCrews();
+  const userCrews = crews.filter(c => c.members.includes(userId));
+  const userCrewIds = userCrews.map(c => c.id);
+  
+  return logs.filter(log => 
+    log.userId === userId || 
+    (log.crewId && userCrewIds.includes(log.crewId))
+  );
+};
+
+export const getEmployeeStats = (userId: string) => {
+  const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+  const crews = getCrews();
+  const userCrews = crews.filter(c => c.members.includes(userId));
+  const calls = getCalls();
+  
+  const userCalls = calls.filter(c => 
+    c.assignedCrewId && 
+    userCrews.some(crew => crew.id === c.assignedCrewId) &&
+    new Date(c.createdAt).getTime() > oneDayAgo
+  );
+  
+  return {
+    totalCalls: userCalls.length,
+    completedCalls: userCalls.filter(c => c.status === 'completed').length,
+    activeCalls: userCalls.filter(c => c.status === 'dispatched').length,
+    urgentCalls: userCalls.filter(c => c.priority === 'urgent').length,
+    highPriority: userCalls.filter(c => c.priority === 'high').length,
   };
 };

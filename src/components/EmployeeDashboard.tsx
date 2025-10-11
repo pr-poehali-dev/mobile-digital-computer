@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -14,6 +14,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import EmployeeTabsContent from './EmployeeTabsContent';
 
 interface EmployeeDashboardProps {
   onLogout: () => void;
@@ -33,21 +35,9 @@ const getStatusConfig = (status: Crew['status']) => {
   }
 };
 
-const getPriorityConfig = (priority: Call['priority']) => {
-  switch (priority) {
-    case 'urgent':
-      return { label: 'Критический', color: 'text-destructive', bgColor: 'bg-destructive/10' };
-    case 'high':
-      return { label: 'Высокий', color: 'text-orange-500', bgColor: 'bg-orange-500/10' };
-    case 'medium':
-      return { label: 'Средний', color: 'text-yellow-500', bgColor: 'bg-yellow-500/10' };
-    case 'low':
-      return { label: 'Низкий', color: 'text-blue-500', bgColor: 'bg-blue-500/10' };
-  }
-};
-
 const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) => {
   const [profileOpen, setProfileOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'calls' | 'analytics' | 'logs'>('calls');
   const [myCrew, setMyCrew] = useState<Crew | null>(null);
   const [myCalls, setMyCalls] = useState<Call[]>([]);
   const [dispatcherOnDuty, setDispatcherOnDuty] = useState(false);
@@ -90,6 +80,11 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
   };
 
   const handleCreateCrew = () => {
+    if (dispatcherOnDuty) {
+      toast({ title: 'Недоступно', description: 'Диспетчер на дежурстве. Обратитесь к диспетчеру.', variant: 'destructive' });
+      setCreateDialog(false);
+      return;
+    }
     if (!crewFormData.unitName.trim()) {
       toast({ title: 'Ошибка', description: 'Введите название экипажа', variant: 'destructive' });
       return;
@@ -97,7 +92,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
     if (!crewFormData.members.includes(currentUser!.id)) {
       crewFormData.members.push(currentUser!.id);
     }
-    createCrew(crewFormData.unitName, crewFormData.members);
+    createCrew(crewFormData.unitName, crewFormData.members, currentUser!.id);
     loadData();
     setCreateDialog(false);
     setCrewFormData({ unitName: '', members: [] });
@@ -106,7 +101,12 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
 
   const handleDeleteCrew = () => {
     if (!myCrew) return;
-    deleteCrew(myCrew.id);
+    if (dispatcherOnDuty) {
+      toast({ title: 'Недоступно', description: 'Диспетчер на дежурстве. Обратитесь к диспетчеру.', variant: 'destructive' });
+      setDeleteDialog(false);
+      return;
+    }
+    deleteCrew(myCrew.id, currentUser!.id);
     loadData();
     setDeleteDialog(false);
     toast({ title: 'Экипаж удален', description: 'Ваш экипаж удален из системы' });
@@ -131,7 +131,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
       return;
     }
     
-    updateCrewStatus(myCrew.id, newStatus);
+    updateCrewStatus(myCrew.id, newStatus, undefined, currentUser!.id);
     loadData();
     toast({
       title: 'Статус обновлен',
@@ -298,75 +298,25 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Icon name="Phone" size={20} />
-                    Мои вызовы
-                  </CardTitle>
-                  <Badge variant="secondary">{myCalls.length}</Badge>
-                </div>
-                <CardDescription>
-                  Активные назначения для вашего экипажа
-                </CardDescription>
+                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'calls' | 'analytics' | 'logs')} className="w-full">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="calls" className="gap-2">
+                      <Icon name="Phone" size={16} />
+                      Вызовы
+                    </TabsTrigger>
+                    <TabsTrigger value="analytics" className="gap-2">
+                      <Icon name="BarChart3" size={16} />
+                      Аналитика
+                    </TabsTrigger>
+                    <TabsTrigger value="logs" className="gap-2">
+                      <Icon name="FileText" size={16} />
+                      Журнал
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </CardHeader>
               <CardContent>
-                {myCalls.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Icon name="FileX" size={48} className="mx-auto mb-3 opacity-50 text-muted-foreground" />
-                    <p className="text-muted-foreground">Нет активных вызовов</p>
-                    <p className="text-sm text-muted-foreground mt-1">Ожидайте назначения от диспетчера</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {myCalls.map((call) => {
-                      const priorityConfig = getPriorityConfig(call.priority);
-                      return (
-                        <Card key={call.id} className="border-2">
-                          <CardHeader>
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="font-mono">
-                                  {call.id}
-                                </Badge>
-                                <Badge className={`${priorityConfig.bgColor} ${priorityConfig.color}`}>
-                                  {priorityConfig.label}
-                                </Badge>
-                                <Badge variant={call.status === 'dispatched' ? 'default' : 'secondary'}>
-                                  {call.status === 'dispatched' ? 'Назначен' : call.status === 'pending' ? 'Ожидает' : 'Завершен'}
-                                </Badge>
-                              </div>
-                              <span className="text-sm text-muted-foreground">{call.time}</span>
-                            </div>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-3">
-                              <div>
-                                <p className="font-semibold text-lg">{call.type}</p>
-                              </div>
-                              <div className="flex items-start gap-2">
-                                <Icon name="MapPin" size={16} className="text-muted-foreground mt-1" />
-                                <div>
-                                  <p className="font-medium">{call.address}</p>
-                                  <Button variant="link" className="h-auto p-0 text-primary" asChild>
-                                    <a href={`https://maps.google.com/?q=${encodeURIComponent(call.address)}`} target="_blank" rel="noopener noreferrer">
-                                      Открыть на карте
-                                    </a>
-                                  </Button>
-                                </div>
-                              </div>
-                              {call.dispatcherName && (
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <Icon name="User" size={14} />
-                                  Диспетчер: {call.dispatcherName}
-                                </div>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                )}
+                <EmployeeTabsContent activeTab={activeTab} myCalls={myCalls} userId={currentUser.id} />
               </CardContent>
             </Card>
           </div>
