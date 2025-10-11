@@ -507,7 +507,7 @@ export const resetPanic = (crewId: number, userId: string): void => {
   const crews = getCrews();
   const crew = crews.find(c => c.id === crewId);
   
-  if (!crew) return;
+  if (!crew || !crew.panicActive) return;
   
   const users = getAllUsers();
   const user = users.find(u => u.id === userId);
@@ -526,19 +526,41 @@ export const resetPanic = (crewId: number, userId: string): void => {
   storage.set(KEYS.CREWS, updatedCrews);
   syncManager.notify('crews_updated');
   
+  const resetReason = userId === 'system' 
+    ? 'автоматически через 10 минут'
+    : `диспетчером ${user?.fullName || 'Неизвестный'}`;
+  
   addActivityLog({
     type: 'panic_reset',
     userId,
-    userName: user?.fullName || 'Неизвестный',
+    userName: user?.fullName || 'Система',
     crewId,
     crewName: crew.unitName,
     description: `Сигнал тревоги сброшен для экипажа ${crew.unitName}`,
+    details: `Причина: ${resetReason}`
   });
 };
 
 export const getActivePanicAlerts = (): Crew[] => {
   const crews = getCrews();
-  return crews.filter(c => c.panicActive);
+  const now = new Date();
+  const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+  
+  const activeAlerts = crews.filter(c => {
+    if (!c.panicActive) return false;
+    
+    if (c.panicTriggeredAt) {
+      const triggeredTime = new Date(c.panicTriggeredAt);
+      if (triggeredTime < tenMinutesAgo) {
+        resetPanic(c.id, 'system');
+        return false;
+      }
+    }
+    
+    return true;
+  });
+  
+  return activeAlerts;
 };
 
 // ============================================================================

@@ -17,7 +17,26 @@ const PanicAlert = ({ currentUser }: PanicAlertProps) => {
   const audioRef = useRef<{ oscillator: OscillatorNode; context: AudioContext; interval: NodeJS.Timeout } | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [blinkingCrews, setBlinkingCrews] = useState<Set<number>>(new Set());
+  const [timeRemaining, setTimeRemaining] = useState<Map<number, number>>(new Map());
   const { toast } = useToast();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const newTimeRemaining = new Map<number, number>();
+      panicCrews.forEach(crew => {
+        if (crew.panicTriggeredAt) {
+          const triggeredTime = new Date(crew.panicTriggeredAt).getTime();
+          const now = Date.now();
+          const elapsed = now - triggeredTime;
+          const remaining = Math.max(0, 10 * 60 * 1000 - elapsed);
+          newTimeRemaining.set(crew.id, remaining);
+        }
+      });
+      setTimeRemaining(newTimeRemaining);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [panicCrews]);
 
   const loadPanicAlerts = () => {
     const alerts = getActivePanicAlerts();
@@ -125,6 +144,10 @@ const PanicAlert = ({ currentUser }: PanicAlertProps) => {
     <div className="fixed top-4 right-4 z-50 space-y-2 max-w-md">
       {panicCrews.map(crew => {
         const isBlinking = blinkingCrews.has(crew.id);
+        const remaining = timeRemaining.get(crew.id) || 0;
+        const minutes = Math.floor(remaining / 60000);
+        const seconds = Math.floor((remaining % 60000) / 1000);
+        
         return (
           <Card 
             key={crew.id} 
@@ -143,6 +166,9 @@ const PanicAlert = ({ currentUser }: PanicAlertProps) => {
                   </p>
                   <p className="text-xs text-red-600 mt-1">
                     Активировано: {crew.panicTriggeredAt ? new Date(crew.panicTriggeredAt).toLocaleTimeString('ru-RU') : ''}
+                  </p>
+                  <p className="text-xs text-red-500 mt-1 font-mono font-bold">
+                    ⏱️ Автосброс через: {minutes}:{seconds.toString().padStart(2, '0')}
                   </p>
                   
                   {currentUser && canManageAccounts(currentUser) && (

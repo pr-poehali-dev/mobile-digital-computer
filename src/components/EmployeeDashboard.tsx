@@ -49,7 +49,22 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<ReturnType<typeof getAvailableCrewMembers>>([]);
   const [crewFormData, setCrewFormData] = useState({ unitName: '', members: [] as string[] });
+  const [panicTimeRemaining, setPanicTimeRemaining] = useState<number>(0);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (myCrew?.panicActive && myCrew.panicTriggeredAt) {
+      const interval = setInterval(() => {
+        const triggeredTime = new Date(myCrew.panicTriggeredAt!).getTime();
+        const now = Date.now();
+        const elapsed = now - triggeredTime;
+        const remaining = Math.max(0, 10 * 60 * 1000 - elapsed);
+        setPanicTimeRemaining(remaining);
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [myCrew]);
 
   const loadData = () => {
     if (!currentUser) return;
@@ -284,6 +299,9 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
                       <div className="p-3 bg-red-100 border-2 border-red-600 rounded-lg">
                         <p className="text-sm font-bold text-red-900">🚨 ТРЕВОГА АКТИВНА</p>
                         <p className="text-xs text-red-700 mt-1">Ожидайте сброса диспетчером</p>
+                        <p className="text-xs text-red-500 mt-1 font-mono font-bold">
+                          ⏱️ Автосброс через: {Math.floor(panicTimeRemaining / 60000)}:{(Math.floor((panicTimeRemaining % 60000) / 1000)).toString().padStart(2, '0')}
+                        </p>
                       </div>
                     )}
                   </div>
