@@ -129,13 +129,10 @@ const CrewsTab = () => {
                       variant="outline" 
                       className="flex-1" 
                       size="sm"
-                      onClick={() => {
-                        setFormData({ status: 'unavailable', location: crew.location || '' });
-                        setEditDialog({ open: true, crew });
-                      }}
+                      onClick={() => handleEdit(crew)}
                     >
-                      <Icon name="XCircle" size={16} className="mr-1" />
-                      Снять
+                      <Icon name="UserPlus" size={16} className="mr-1" />
+                      Назначить
                     </Button>
                   )}
                   {crew.status === 'unavailable' && (
