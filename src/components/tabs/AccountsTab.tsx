@@ -256,7 +256,7 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
             <TableHeader>
               <TableRow>
                 <TableHead>ID</TableHead>
-                <TableHead>ФИО</TableHead>
+                <TableHead>Имя и фамилия</TableHead>
                 <TableHead>Роль</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead className="text-right">Действия</TableHead>
@@ -334,12 +334,12 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="fullName">ФИО *</Label>
+              <Label htmlFor="fullName">Имя и фамилия *</Label>
               <Input
                 id="fullName"
                 value={formData.fullName}
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                placeholder="Иванов Иван Иванович"
+                placeholder="Иван Иванов"
               />
             </div>
             <div className="space-y-2">
@@ -405,12 +405,12 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
               <p className="text-xs text-muted-foreground">Ровно 5 цифр. {editDialog.user?.id === currentUser?.id ? 'Нельзя изменить свой ID' : 'Используется для входа в систему'}</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-fullName">ФИО</Label>
+              <Label htmlFor="edit-fullName">Имя и фамилия</Label>
               <Input
                 id="edit-fullName"
                 value={formData.fullName}
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                placeholder="Иванов Иван Иванович"
+                placeholder="Иван Иванов"
               />
             </div>
             <div className="space-y-2">

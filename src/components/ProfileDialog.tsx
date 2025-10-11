@@ -59,7 +59,7 @@ const ProfileDialog = ({ open, onOpenChange, user }: ProfileDialogProps) => {
             </div>
           </div>
           <div className="space-y-2">
-            <Label>ФИО</Label>
+            <Label>Имя и фамилия</Label>
             <Input value={user.fullName} disabled />
           </div>
           <div className="space-y-2">

@@ -26,16 +26,12 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
               <Input id="user-id" value={currentUser?.id || ''} disabled />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="user-name">ФИО</Label>
-              <Input id="user-name" value={currentUser?.fullName || ''} placeholder="Иванов Иван Иванович" />
+              <Label htmlFor="user-name">Имя и фамилия</Label>
+              <Input id="user-name" value={currentUser?.fullName || ''} placeholder="Иван Иванов" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" value={currentUser?.email || ''} placeholder="user@example.com" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Телефон</Label>
-              <Input id="phone" placeholder="+7 (999) 123-45-67" />
             </div>
           </div>
           <Button>
@@ -101,26 +97,6 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
                 <SelectItem value="60">Каждую минуту</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="map-type">Тип карты</Label>
-            <Select defaultValue="street">
-              <SelectTrigger id="map-type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="street">Схема улиц</SelectItem>
-                <SelectItem value="satellite">Спутник</SelectItem>
-                <SelectItem value="hybrid">Гибридная</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Компактный вид</Label>
-              <p className="text-sm text-muted-foreground">Уменьшить размер карточек</p>
-            </div>
-            <Switch />
           </div>
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
