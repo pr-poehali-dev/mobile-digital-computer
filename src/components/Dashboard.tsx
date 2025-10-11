@@ -75,16 +75,16 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="bg-sidebar border-b border-sidebar-border">
+      <header className="bg-card border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Icon name="Radio" size={24} className="text-primary" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-sidebar-foreground">MDC System</h1>
-                <p className="text-xs text-sidebar-foreground/70">Диспетчерский контроль</p>
+                <h1 className="text-xl font-bold">MDC System</h1>
+                <p className="text-xs text-muted-foreground">Диспетчерский контроль</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -109,8 +109,9 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
               )}
               {currentUser && (
                 <div className="text-right hidden sm:block">
-                  <div className="flex items-center justify-end gap-2 mb-1">
-                    <Badge variant="outline" className="text-xs">
+                  <p className="text-sm font-medium mb-1">{currentUser.fullName}</p>
+                  <div className="flex items-center justify-end gap-2">
+                    <Badge variant="default" className="text-xs">
                       {currentUser.role === 'manager' && 'Менеджер'}
                       {currentUser.role === 'supervisor' && 'Руководитель'}
                       {currentUser.role === 'dispatcher' && 'Диспетчер'}
@@ -120,13 +121,12 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
                       #{currentUser.id}
                     </Badge>
                   </div>
-                  <p className="text-sm font-medium text-sidebar-foreground">{currentUser.fullName}</p>
                 </div>
               )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 bg-primary/20">
-                    <Icon name="User" size={20} className="text-primary" />
+                  <Button variant="ghost" size="icon" className="rounded-full h-10 w-10">
+                    <Icon name="User" size={20} />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
