@@ -3,7 +3,6 @@ export interface User {
   fullName: string;
   role: 'manager' | 'dispatcher' | 'supervisor' | 'employee';
   email: string;
-  phone: string;
 }
 
 const USERS_DB = [
@@ -12,32 +11,28 @@ const USERS_DB = [
     password: 'Admin2024!',
     fullName: 'Петров Петр Петрович',
     role: 'manager',
-    email: 'manager@mdc.system',
-    phone: '+7 (999) 000-11-22'
+    email: 'manager@mdc.system'
   },
   {
     id: '10002',
     password: 'Disp2024!',
     fullName: 'Иванов Иван Иванович',
     role: 'dispatcher',
-    email: 'dispatcher@mdc.system',
-    phone: '+7 (999) 123-45-67'
+    email: 'dispatcher@mdc.system'
   },
   {
     id: '10003',
     password: 'Super2024!',
     fullName: 'Сидоров Сергей Сергеевич',
     role: 'supervisor',
-    email: 'supervisor@mdc.system',
-    phone: '+7 (999) 222-33-44'
+    email: 'supervisor@mdc.system'
   },
   {
     id: '10004',
     password: 'Emp2024!',
     fullName: 'Васильев Василий Васильевич',
     role: 'employee',
-    email: 'employee@mdc.system',
-    phone: '+7 (999) 333-44-55'
+    email: 'employee@mdc.system'
   }
 ];
 

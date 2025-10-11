@@ -54,10 +54,6 @@ const ProfileDialog = ({ open, onOpenChange, user }: ProfileDialogProps) => {
             <Label>Email</Label>
             <Input value={user.email} disabled />
           </div>
-          <div className="space-y-2">
-            <Label>Телефон</Label>
-            <Input value={user.phone} disabled />
-          </div>
           <div className="rounded-lg bg-muted p-4 space-y-2">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Icon name="Info" size={16} className="text-muted-foreground" />

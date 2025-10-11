@@ -47,7 +47,6 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
     password: '',
     fullName: '',
     email: '',
-    phone: '',
     role: 'employee' as User['role']
   });
   const { toast } = useToast();
@@ -66,7 +65,6 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
       password: '',
       fullName: user.fullName,
       email: user.email,
-      phone: user.phone,
       role: user.role
     });
     setEditDialog({ open: true, user });
@@ -78,7 +76,6 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
       password: '',
       fullName: '',
       email: '',
-      phone: '',
       role: 'employee'
     });
     setCreateDialog(true);
@@ -89,7 +86,6 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
       updateUser(editDialog.user.id, {
         fullName: formData.fullName,
         email: formData.email,
-        phone: formData.phone,
         role: formData.role
       });
       loadUsers();
@@ -133,7 +129,6 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
     createUser(formData.userId, formData.password, {
       fullName: formData.fullName,
       email: formData.email,
-      phone: formData.phone,
       role: formData.role
     });
 
@@ -144,7 +139,6 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
       password: formData.password,
       fullName: formData.fullName,
       email: formData.email,
-      phone: formData.phone,
       role: formData.role
     });
     localStorage.setItem('mdc_users', JSON.stringify(users));
@@ -222,7 +216,6 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
                 <TableHead>ФИО</TableHead>
                 <TableHead>Роль</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Телефон</TableHead>
                 <TableHead className="text-right">Действия</TableHead>
               </TableRow>
             </TableHeader>
@@ -239,7 +232,6 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                  <TableCell className="text-muted-foreground">{user.phone}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(user)}>
@@ -330,15 +322,6 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
                 placeholder="user@example.com"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Телефон</Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+7 (999) 123-45-67"
-              />
-            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateDialog(false)}>
@@ -394,14 +377,6 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-phone">Телефон</Label>
-              <Input
-                id="edit-phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               />
             </div>
           </div>

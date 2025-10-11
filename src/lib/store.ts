@@ -27,7 +27,6 @@ export interface Dispatcher {
   id: string;
   fullName: string;
   email: string;
-  phone: string;
   status: 'active' | 'inactive';
 }
 
@@ -57,29 +56,25 @@ const defaultUsers: User[] = [
     id: '10001',
     fullName: 'Петров Петр Петрович',
     role: 'manager',
-    email: 'manager@mdc.system',
-    phone: '+7 (999) 000-11-22'
+    email: 'manager@mdc.system'
   },
   {
     id: '10002',
     fullName: 'Иванов Иван Иванович',
     role: 'dispatcher',
-    email: 'dispatcher@mdc.system',
-    phone: '+7 (999) 123-45-67'
+    email: 'dispatcher@mdc.system'
   },
   {
     id: '10003',
     fullName: 'Сидоров Сергей Сергеевич',
     role: 'supervisor',
-    email: 'supervisor@mdc.system',
-    phone: '+7 (999) 222-33-44'
+    email: 'supervisor@mdc.system'
   },
   {
     id: '10004',
     fullName: 'Васильев Василий Васильевич',
     role: 'employee',
-    email: 'employee@mdc.system',
-    phone: '+7 (999) 333-44-55'
+    email: 'employee@mdc.system'
   }
 ];
 
