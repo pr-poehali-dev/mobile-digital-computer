@@ -87,3 +87,53 @@ export const endDispatcherShift = async (dispatcherId: string): Promise<void> =>
     method: 'DELETE'
   });
 };
+
+// Экипажи
+export interface ApiCrew {
+  id: number;
+  unit_name: string;
+  status: 'available' | 'en-route' | 'on-scene' | 'unavailable';
+  location?: string;
+  last_update: string;
+}
+
+export const getCrewsFromApi = async (): Promise<ApiCrew[]> => {
+  const url = await getFunctionUrl('online-users');
+  if (!url) return [];
+  
+  const response = await fetch(`${url}?resource=crews`);
+  return response.json();
+};
+
+export const createCrewInApi = async (unitName: string, status: string, location: string): Promise<ApiCrew> => {
+  const url = await getFunctionUrl('online-users');
+  if (!url) throw new Error('API URL not found');
+  
+  const response = await fetch(`${url}?resource=crews`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ unit_name: unitName, status, location })
+  });
+  
+  if (!response.ok) throw new Error('Failed to create crew');
+  return response.json();
+};
+
+export const updateCrewInApi = async (id: number, data: Partial<ApiCrew>): Promise<ApiCrew> => {
+  const url = await getFunctionUrl('online-users');
+  if (!url) throw new Error('API URL not found');
+  
+  const updateData: any = { id };
+  if (data.status) updateData.status = data.status;
+  if (data.location) updateData.location = data.location;
+  if (data.unit_name) updateData.unit_name = data.unit_name;
+
+  const response = await fetch(`${url}?resource=crews`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updateData)
+  });
+  
+  if (!response.ok) throw new Error('Failed to update crew');
+  return response.json();
+};

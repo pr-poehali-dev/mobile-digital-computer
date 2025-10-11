@@ -21,7 +21,7 @@ def get_db_connection():
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     method: str = event.get('httpMethod', 'GET')
     params = event.get('queryStringParameters', {}) or {}
-    resource = params.get('resource', 'users')  # 'users' или 'shifts'
+    resource = params.get('resource', 'users')  # 'users', 'shifts' или 'crews'
     
     # CORS preflight
     if method == 'OPTIONS':
@@ -253,6 +253,119 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                         'Access-Control-Allow-Origin': '*'
                     },
                     'body': json.dumps({'success': True}),
+                    'isBase64Encoded': False
+                }
+        
+        # ===== ЭКИПАЖИ =====
+        if resource == 'crews':
+            # GET - получить все экипажи
+            if method == 'GET':
+                cur.execute("""
+                    SELECT id, unit_name, status, location, last_update
+                    FROM t_p48049793_mobile_digital_compu.crews
+                    ORDER BY unit_name
+                """)
+                crews = cur.fetchall()
+                
+                cur.close()
+                conn.close()
+                
+                return {
+                    'statusCode': 200,
+                    'headers': {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*'
+                    },
+                    'body': json.dumps([dict(c) for c in crews], default=str),
+                    'isBase64Encoded': False
+                }
+            
+            # POST - создать новый экипаж
+            if method == 'POST':
+                body_data = json.loads(event.get('body', '{}'))
+                unit_name = body_data.get('unit_name')
+                status = body_data.get('status', 'available')
+                location = body_data.get('location', '')
+                
+                if not unit_name:
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'unit_name required'}),
+                        'isBase64Encoded': False
+                    }
+                
+                cur.execute("""
+                    INSERT INTO t_p48049793_mobile_digital_compu.crews 
+                    (unit_name, status, location, last_update)
+                    VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
+                    RETURNING id, unit_name, status, location, last_update
+                """, (unit_name, status, location))
+                
+                result = cur.fetchone()
+                conn.commit()
+                cur.close()
+                conn.close()
+                
+                return {
+                    'statusCode': 201,
+                    'headers': {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*'
+                    },
+                    'body': json.dumps(dict(result), default=str),
+                    'isBase64Encoded': False
+                }
+            
+            # PUT - обновить экипаж
+            if method == 'PUT':
+                body_data = json.loads(event.get('body', '{}'))
+                crew_id = body_data.get('id')
+                
+                if not crew_id:
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'id required'}),
+                        'isBase64Encoded': False
+                    }
+                
+                update_fields = []
+                params_list = []
+                
+                if 'status' in body_data:
+                    update_fields.append('status = %s')
+                    params_list.append(body_data['status'])
+                if 'location' in body_data:
+                    update_fields.append('location = %s')
+                    params_list.append(body_data['location'])
+                if 'unit_name' in body_data:
+                    update_fields.append('unit_name = %s')
+                    params_list.append(body_data['unit_name'])
+                
+                update_fields.append('last_update = CURRENT_TIMESTAMP')
+                params_list.append(crew_id)
+                
+                query = f"""
+                    UPDATE t_p48049793_mobile_digital_compu.crews
+                    SET {', '.join(update_fields)}
+                    WHERE id = %s
+                    RETURNING id, unit_name, status, location, last_update
+                """
+                
+                cur.execute(query, params_list)
+                result = cur.fetchone()
+                conn.commit()
+                cur.close()
+                conn.close()
+                
+                return {
+                    'statusCode': 200,
+                    'headers': {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*'
+                    },
+                    'body': json.dumps(dict(result), default=str),
                     'isBase64Encoded': False
                 }
         

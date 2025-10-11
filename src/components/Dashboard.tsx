@@ -33,6 +33,22 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
       setIsOnDuty(isUserOnDuty(currentUser.id));
       setActiveDispatchers(getActiveDispatcherShifts().length);
     }
+    
+    const handleShiftChange = () => {
+      console.log('Dashboard: dispatcher_shift_changed event received');
+      if (currentUser) {
+        setIsOnDuty(isUserOnDuty(currentUser.id));
+        setActiveDispatchers(getActiveDispatcherShifts().length);
+      }
+    };
+    
+    window.addEventListener('dispatcher_shift_changed', handleShiftChange);
+    window.addEventListener('storage', handleShiftChange);
+    
+    return () => {
+      window.removeEventListener('dispatcher_shift_changed', handleShiftChange);
+      window.removeEventListener('storage', handleShiftChange);
+    };
   }, [currentUser]);
 
   const handleToggleDuty = () => {
