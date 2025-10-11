@@ -1159,6 +1159,36 @@ export const updateSystemRestrictions = (restrictions: Partial<SystemRestriction
       
       storage.set(KEYS.USERS, updatedUsers);
       syncManager.notify('users_updated');
+      
+      const calls = getCalls();
+      const activeCalls = calls.filter(c => c.status !== 'completed');
+      activeCalls.forEach(call => {
+        completeCall(call.id);
+      });
+      
+      const crews = getCrews();
+      const crewsWithAlerts = crews.filter(c => c.panicActive || c.signal100Active);
+      crewsWithAlerts.forEach(crew => {
+        if (crew.panicActive) {
+          resetPanic(crew.id, 'system');
+        }
+        if (crew.signal100Active) {
+          const updatedCrews = getCrews().map(c => 
+            c.id === crew.id
+              ? { ...c, signal100Active: false, signal100TriggeredAt: undefined, signal100TriggeredBy: undefined }
+              : c
+          );
+          storage.set(KEYS.CREWS, updatedCrews);
+        }
+      });
+      
+      const signal100 = getActiveSignal100();
+      if (signal100) {
+        resetSignal100('system');
+      }
+      
+      syncManager.notify('crews_updated');
+      syncManager.notify('calls_updated');
     } else {
       const updatedUsers = users.map(u => {
         if (u.role === 'dispatcher' && u.frozenBySystem) {
