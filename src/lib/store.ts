@@ -1,5 +1,6 @@
 import { type User } from './auth';
 import { fetchUnits, createUnitAPI, updateUnitAPI, deleteUnitAPI } from './units-api';
+import { syncManager } from './sync-manager';
 
 // ============================================================================
 // TYPES
@@ -73,45 +74,7 @@ const KEYS = {
   ONLINE_USERS: 'mdc_online_users',
 } as const;
 
-// ============================================================================
-// SYNC MANAGER - Центральная система синхронизации между вкладками
-// ============================================================================
 
-class SyncManager {
-  private channel: BroadcastChannel | null;
-
-  constructor() {
-    this.channel = typeof BroadcastChannel !== 'undefined' 
-      ? new BroadcastChannel('mdc_sync') 
-      : null;
-  }
-
-  notify(event: string) {
-    window.dispatchEvent(new CustomEvent(event));
-    this.channel?.postMessage({ type: event });
-  }
-
-  listen(event: string, callback: () => void) {
-    const handleCustomEvent = () => callback();
-    const handleBroadcast = (e: MessageEvent) => {
-      if (e.data.type === event) callback();
-    };
-
-    window.addEventListener(event, handleCustomEvent);
-    this.channel?.addEventListener('message', handleBroadcast);
-
-    return () => {
-      window.removeEventListener(event, handleCustomEvent);
-      this.channel?.removeEventListener('message', handleBroadcast);
-    };
-  }
-
-  close() {
-    this.channel?.close();
-  }
-}
-
-const syncManager = new SyncManager();
 
 // ============================================================================
 // STORAGE HELPERS
@@ -687,6 +650,26 @@ export const getEmployeeStats = (userId: string) => {
     highPriority: userCalls.filter(c => c.priority === 'high').length,
   };
 };
+
+// ============================================================================
+// AUTO SYNC - Автоматическая синхронизация с API каждые 3 секунды
+// ============================================================================
+
+let autoSyncInterval: NodeJS.Timeout | null = null;
+
+const startAutoSync = () => {
+  if (autoSyncInterval) return;
+  
+  syncCrewsFromAPI();
+  
+  autoSyncInterval = setInterval(async () => {
+    await syncCrewsFromAPI();
+  }, 3000);
+};
+
+if (typeof window !== 'undefined') {
+  startAutoSync();
+}
 
 // ============================================================================
 // EXPORTS
