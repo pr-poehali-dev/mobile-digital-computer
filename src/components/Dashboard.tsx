@@ -13,7 +13,6 @@ import AccountsTab from './tabs/AccountsTab';
 import ProfileDialog from './ProfileDialog';
 import DispatcherPanicAlert from './DispatcherPanicAlert';
 import Signal100Alert from './Signal100Alert';
-import DispatcherSignal100Control from './DispatcherSignal100Control';
 import { type User } from '@/lib/auth';
 import { canManageAccounts } from '@/lib/permissions';
 import { startDispatcherShift, endDispatcherShift, isUserOnDuty, getActiveDispatcherShifts } from '@/lib/store';
@@ -78,8 +77,12 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
 
   return (
     <div className="min-h-screen bg-background">
-      <DispatcherPanicAlert currentUser={currentUser} />
-      <Signal100Alert currentUser={currentUser} />
+      <div className="fixed top-4 left-4 z-50 space-y-3 max-w-md">
+        <Signal100Alert currentUser={currentUser} />
+      </div>
+      <div className="fixed top-4 right-4 z-50 space-y-3 max-w-md">
+        <DispatcherPanicAlert currentUser={currentUser} />
+      </div>
       <header className="bg-card border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -95,7 +98,6 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
             <div className="flex items-center space-x-4">
               {currentUser?.role === 'dispatcher' && (
                 <>
-                  <DispatcherSignal100Control currentUser={currentUser} />
                   <Button
                     onClick={handleToggleDuty}
                     variant={isOnDuty ? 'destructive' : 'default'}

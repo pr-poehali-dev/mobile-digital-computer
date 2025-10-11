@@ -14,7 +14,9 @@ import {
   assignCrewToCall,
   activatePanic,
   resetPanic,
+  activateSignal100,
   resetSignal100,
+  getActiveSignal100,
   type Crew,
 } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +33,7 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
   const [crews, setCrews] = useState<Crew[]>([]);
   const [calls, setCalls] = useState<ReturnType<typeof getCalls>>([]);
   const [availableUsers, setAvailableUsers] = useState<ReturnType<typeof getAvailableCrewMembers>>([]);
+  const [signal100, setSignal100] = useState<ReturnType<typeof getActiveSignal100>>(null);
   const [editDialog, setEditDialog] = useState<{
     open: boolean;
     crew: Crew | null;
@@ -63,9 +66,10 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
     loadCrews();
     loadCalls();
     loadAvailableUsers();
+    setSignal100(getActiveSignal100());
   };
 
-  useSync(['crews_updated', 'online_users_changed', 'calls_updated'], loadAll, 2000);
+  useSync(['crews_updated', 'online_users_changed', 'calls_updated', 'signal100_changed'], loadAll, 2000);
 
   const loadCrews = () => {
     const loadedCrews = getCrews();
@@ -235,6 +239,18 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
     loadCrews();
   };
 
+  const handleSignal100Activate = () => {
+    if (!currentUser) return;
+    
+    activateSignal100(null, currentUser.id);
+    toast({
+      title: '🟡 СИГНАЛ 100 АКТИВИРОВАН',
+      description: 'Звуковое оповещение отправлено всем экипажам',
+      className: 'bg-yellow-500 text-white',
+    });
+    loadAll();
+  };
+
   const handleSignal100Reset = () => {
     if (!currentUser) return;
     
@@ -244,7 +260,7 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
       description: 'Звуковое оповещение остановлено для всех экипажей',
     });
     
-    loadCrews();
+    loadAll();
   };
 
   const toggleMember = (userId: string) => {
@@ -273,10 +289,34 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
             Доступно сотрудников: {availableUsers.length}
           </p>
         </div>
-        <Button onClick={handleCreate}>
-          <Icon name="Plus" size={18} className="mr-2" />
-          Создать экипаж
-        </Button>
+        <div className="flex gap-2">
+          {currentUser?.role === 'dispatcher' && (
+            signal100?.active ? (
+              <Button
+                onClick={handleSignal100Reset}
+                variant="outline"
+                size="sm"
+                className="gap-2 border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+              >
+                <Icon name="RadioOff" size={16} />
+                Отменить сигнал 100
+              </Button>
+            ) : (
+              <Button
+                onClick={handleSignal100Activate}
+                size="sm"
+                className="gap-2 bg-yellow-500 hover:bg-yellow-600 text-white"
+              >
+                <Icon name="Radio" size={16} />
+                Сигнал 100
+              </Button>
+            )
+          )}
+          <Button onClick={handleCreate}>
+            <Icon name="Plus" size={18} className="mr-2" />
+            Создать экипаж
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

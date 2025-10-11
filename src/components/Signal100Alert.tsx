@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
-import { getActiveSignal100 } from '@/lib/store';
+import { getActiveSignal100, resetSignal100 } from '@/lib/store';
 import { useSync } from '@/hooks/use-sync';
+import { useToast } from '@/hooks/use-toast';
+import { canManageAccounts } from '@/lib/permissions';
 
 interface Signal100AlertProps {
   currentUser: { id: string; fullName: string } | null;
@@ -11,8 +14,10 @@ interface Signal100AlertProps {
 
 const Signal100Alert = ({ currentUser }: Signal100AlertProps) => {
   const [signal100, setSignal100] = useState<ReturnType<typeof getActiveSignal100>>(null);
+  const [isVisible, setIsVisible] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const { toast } = useToast();
 
   const loadSignal100 = () => {
     const activeSignal = getActiveSignal100();
@@ -37,7 +42,8 @@ const Signal100Alert = ({ currentUser }: Signal100AlertProps) => {
     oscillator.type = 'sine';
 
     gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 2);
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime + 1.99);
+    gainNode.gain.setValueAtTime(0, audioContext.currentTime + 2);
 
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + 2);
@@ -45,6 +51,7 @@ const Signal100Alert = ({ currentUser }: Signal100AlertProps) => {
 
   useEffect(() => {
     if (signal100?.active) {
+      setIsVisible(true);
       playBeep();
 
       intervalRef.current = setInterval(() => {
@@ -60,6 +67,7 @@ const Signal100Alert = ({ currentUser }: Signal100AlertProps) => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
+      setIsVisible(false);
     }
   }, [signal100?.active, signal100?.id]);
 
@@ -74,7 +82,27 @@ const Signal100Alert = ({ currentUser }: Signal100AlertProps) => {
     };
   }, []);
 
-  if (!signal100?.active) return null;
+  const handleReset = () => {
+    if (!currentUser) return;
+    
+    if (!canManageAccounts(currentUser)) {
+      toast({
+        title: 'Недостаточно прав',
+        description: 'Только диспетчер или выше может отменить сигнал 100',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    resetSignal100(currentUser.id);
+    setIsVisible(false);
+    toast({
+      title: 'Сигнал 100 отменен',
+      description: 'Звуковое оповещение остановлено',
+    });
+  };
+
+  if (!signal100?.active || !isVisible) return null;
 
   const timeElapsed = Date.now() - new Date(signal100.triggeredAt).getTime();
   const timeRemaining = Math.max(0, 10 * 60 * 1000 - timeElapsed);
@@ -82,41 +110,44 @@ const Signal100Alert = ({ currentUser }: Signal100AlertProps) => {
   const secondsRemaining = Math.floor((timeRemaining % 60000) / 1000);
 
   return (
-    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4 animate-in fade-in slide-in-from-top-5 duration-300">
-      <Card className="border-2 border-yellow-500 bg-yellow-50 shadow-2xl">
-        <CardContent className="pt-6">
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0">
-              <div className="h-12 w-12 rounded-full bg-yellow-500 flex items-center justify-center animate-pulse">
-                <Icon name="Radio" size={24} className="text-white" />
-              </div>
+    <Card className="border-yellow-500 border-2 bg-yellow-50 animate-pulse">
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <Icon name="Radio" size={32} className="text-yellow-600 flex-shrink-0" />
+          <div className="flex-1">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-bold text-yellow-900 text-lg">🟡 СИГНАЛ 100</h3>
+              <Badge variant="outline" className="bg-yellow-100 text-yellow-900 border-yellow-500">
+                {minutesRemaining}:{secondsRemaining.toString().padStart(2, '0')}
+              </Badge>
             </div>
-            <div className="flex-1 space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-yellow-900 text-lg">🟡 СИГНАЛ 100</h3>
-                <Badge variant="outline" className="bg-yellow-100 text-yellow-900 border-yellow-500">
-                  {minutesRemaining}:{secondsRemaining.toString().padStart(2, '0')}
-                </Badge>
-              </div>
-              
-              <div className="space-y-1">
-                {signal100.crewName && (
-                  <p className="text-sm text-yellow-900">
-                    <strong>Экипаж:</strong> {signal100.crewName}
-                  </p>
-                )}
-                <p className="text-sm text-yellow-900">
-                  <strong>Активировал:</strong> {signal100.triggeredByName}
-                </p>
-                <p className="text-xs text-yellow-700 mt-2">
-                  Звуковой сигнал 440 Гц повторяется каждые 15 секунд
-                </p>
-              </div>
-            </div>
+            {signal100.crewName && (
+              <p className="text-sm text-yellow-800 font-semibold mt-1">
+                Экипаж: {signal100.crewName}
+              </p>
+            )}
+            <p className="text-sm text-yellow-700 mt-1">
+              Активировал: {signal100.triggeredByName}
+            </p>
+            <p className="text-xs text-yellow-600 mt-1">
+              Звуковой сигнал 440 Гц повторяется каждые 15 секунд
+            </p>
+            
+            {currentUser && canManageAccounts(currentUser) && (
+              <Button
+                onClick={handleReset}
+                size="sm"
+                variant="outline"
+                className="mt-3 w-full border-yellow-600 text-yellow-700 hover:bg-yellow-100"
+              >
+                <Icon name="RadioOff" size={16} className="mr-2" />
+                Отменить сигнал
+              </Button>
+            )}
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
