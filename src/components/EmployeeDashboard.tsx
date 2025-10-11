@@ -53,7 +53,8 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
     const interval = setInterval(loadData, 2000);
     
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'mdc_dispatcher_shifts') {
+      if (e.key === 'mdc_dispatcher_shifts' || e.key === 'mdc_dispatcher_shifts_timestamp') {
+        console.log('Storage change detected:', e.key);
         loadData();
       }
     };

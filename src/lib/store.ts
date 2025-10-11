@@ -331,6 +331,8 @@ export const startDispatcherShift = (dispatcher: User): void => {
   if (!alreadyOnDuty) {
     shifts.push(newShift);
     localStorage.setItem(DISPATCHER_SHIFTS_KEY, JSON.stringify(shifts));
+    localStorage.setItem('mdc_dispatcher_shifts_timestamp', Date.now().toString());
+    console.log('Dispatcher shift started:', dispatcher.fullName);
     window.dispatchEvent(new CustomEvent('dispatcher_shift_changed'));
   }
 };
@@ -339,6 +341,8 @@ export const endDispatcherShift = (dispatcherId: string): void => {
   const shifts = getActiveDispatcherShifts();
   const filtered = shifts.filter(s => s.dispatcherId !== dispatcherId);
   localStorage.setItem(DISPATCHER_SHIFTS_KEY, JSON.stringify(filtered));
+  localStorage.setItem('mdc_dispatcher_shifts_timestamp', Date.now().toString());
+  console.log('Dispatcher shift ended:', dispatcherId);
   window.dispatchEvent(new CustomEvent('dispatcher_shift_changed'));
 };
 
