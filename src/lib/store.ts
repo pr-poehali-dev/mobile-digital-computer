@@ -88,6 +88,12 @@ export interface SystemLockdown {
   activatedBy?: string;
 }
 
+export interface SystemRestrictions {
+  dispatcherSystemDisabled: boolean;
+  signal100Disabled: boolean;
+  panicButtonDisabled: boolean;
+}
+
 // ============================================================================
 // STORAGE KEYS
 // ============================================================================
@@ -104,6 +110,7 @@ const KEYS = {
   SIGNAL100_ALERT: 'mdc_signal100_alert',
   SIGNAL100_LAST_RESET: 'mdc_signal100_last_reset',
   SYSTEM_LOCKDOWN: 'mdc_system_lockdown',
+  SYSTEM_RESTRICTIONS: 'mdc_system_restrictions',
   USER_SETTINGS: 'mdc_user_settings',
 } as const;
 
@@ -136,6 +143,7 @@ const storage = {
       [KEYS.ONLINE_USERS]: 'online_users_changed',
       [KEYS.ACTIVITY_LOG]: 'activity_log_updated',
       [KEYS.SYSTEM_LOCKDOWN]: 'system_lockdown_changed',
+      [KEYS.SYSTEM_RESTRICTIONS]: 'system_restrictions_changed',
       [KEYS.USER_SETTINGS]: 'user_settings_changed',
     };
     
@@ -1058,6 +1066,45 @@ export const updateUserSettings = (userId: string, settings: Partial<Omit<UserSe
   
   storage.set(KEYS.USER_SETTINGS, allSettings);
   syncManager.notify('user_settings_changed', { userId, settings: updatedSettings });
+};
+
+// ============================================================================
+// SYSTEM RESTRICTIONS API
+// ============================================================================
+
+export const getSystemRestrictions = (): SystemRestrictions => {
+  return storage.get<SystemRestrictions>(KEYS.SYSTEM_RESTRICTIONS, {
+    dispatcherSystemDisabled: false,
+    signal100Disabled: false,
+    panicButtonDisabled: false
+  });
+};
+
+export const updateSystemRestrictions = (restrictions: Partial<SystemRestrictions>): void => {
+  const current = getSystemRestrictions();
+  const updated = { ...current, ...restrictions };
+  storage.set(KEYS.SYSTEM_RESTRICTIONS, updated);
+  syncManager.notify('system_restrictions_changed', updated);
+  
+  if (restrictions.dispatcherSystemDisabled) {
+    const shifts = storage.get<DispatcherShift[]>(KEYS.DISPATCHER_SHIFTS, []);
+    const activeShifts = shifts.filter(s => s.isActive);
+    activeShifts.forEach(shift => {
+      endDispatcherShift(shift.dispatcherId);
+    });
+  }
+};
+
+export const isDispatcherSystemDisabled = (): boolean => {
+  return getSystemRestrictions().dispatcherSystemDisabled;
+};
+
+export const isSignal100Disabled = (): boolean => {
+  return getSystemRestrictions().signal100Disabled;
+};
+
+export const isPanicButtonDisabled = (): boolean => {
+  return getSystemRestrictions().panicButtonDisabled;
 };
 
 // ============================================================================

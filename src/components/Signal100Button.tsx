@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import Icon from '@/components/ui/icon';
-import { activateSignal100, getUserCrew } from '@/lib/store';
+import { activateSignal100, getUserCrew, isSignal100Disabled } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { useSync } from '@/hooks/use-sync';
 
@@ -34,7 +34,7 @@ const Signal100Button = ({ crewId, userId, crewName, disabled }: Signal100Button
     }
   };
 
-  useSync(['crews_updated', 'signal100_changed'], updateSignal100Timer, 1000);
+  useSync(['crews_updated', 'signal100_changed', 'system_restrictions_changed'], updateSignal100Timer, 1000);
 
   useEffect(() => {
     if (isSignal100Active) {
@@ -44,6 +44,16 @@ const Signal100Button = ({ crewId, userId, crewName, disabled }: Signal100Button
   }, [isSignal100Active]);
 
   const handleActivateSignal100 = () => {
+    if (isSignal100Disabled()) {
+      setConfirmOpen(false);
+      toast({
+        title: 'Сигнал 100 заблокирован',
+        description: 'Менеджер заблокировал возможность активации Сигнала 100',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
     activateSignal100(crewId, userId);
     setConfirmOpen(false);
     
@@ -58,12 +68,14 @@ const Signal100Button = ({ crewId, userId, crewName, disabled }: Signal100Button
     <>
       <Button
         onClick={() => setConfirmOpen(true)}
-        disabled={disabled}
+        disabled={disabled || isSignal100Disabled()}
         variant={disabled ? "secondary" : "default"}
         size="sm"
         className={`w-full gap-2 font-bold ${
           disabled 
             ? 'bg-yellow-600 hover:bg-yellow-600 cursor-not-allowed text-white' 
+            : isSignal100Disabled()
+            ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed text-white'
             : 'bg-yellow-500 hover:bg-yellow-600 text-white'
         }`}
       >
@@ -75,6 +87,8 @@ const Signal100Button = ({ crewId, userId, crewName, disabled }: Signal100Button
               ⏱️ {Math.floor(signal100TimeRemaining / 60000)}:{(Math.floor((signal100TimeRemaining % 60000) / 1000)).toString().padStart(2, '0')}
             </span>
           </span>
+        ) : isSignal100Disabled() ? (
+          'СИГНАЛ 100 ЗАБЛОКИРОВАН'
         ) : (
           'СИГНАЛ 100'
         )}

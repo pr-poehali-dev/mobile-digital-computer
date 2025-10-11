@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import Icon from '@/components/ui/icon';
-import { activatePanic, getUserCrew } from '@/lib/store';
+import { activatePanic, getUserCrew, isPanicButtonDisabled } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { useSync } from '@/hooks/use-sync';
 
@@ -34,7 +34,7 @@ const PanicButton = ({ crewId, userId, crewName, disabled }: PanicButtonProps) =
     }
   };
 
-  useSync(['crews_updated'], updatePanicTimer, 1000);
+  useSync(['crews_updated', 'system_restrictions_changed'], updatePanicTimer, 1000);
 
   useEffect(() => {
     if (isPanicActive) {
@@ -44,6 +44,16 @@ const PanicButton = ({ crewId, userId, crewName, disabled }: PanicButtonProps) =
   }, [isPanicActive]);
 
   const handleActivatePanic = () => {
+    if (isPanicButtonDisabled()) {
+      setConfirmOpen(false);
+      toast({
+        title: 'Кнопка паники заблокирована',
+        description: 'Менеджер заблокировал возможность нажатия кнопки паники',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
     activatePanic(crewId, userId);
     setConfirmOpen(false);
     
@@ -58,12 +68,14 @@ const PanicButton = ({ crewId, userId, crewName, disabled }: PanicButtonProps) =
     <>
       <Button
         onClick={() => setConfirmOpen(true)}
-        disabled={disabled}
+        disabled={disabled || isPanicButtonDisabled()}
         variant={disabled ? "destructive" : "default"}
         size="sm"
         className={`w-full gap-2 font-bold ${
           disabled 
             ? 'bg-red-600 hover:bg-red-600 cursor-not-allowed' 
+            : isPanicButtonDisabled()
+            ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed text-white'
             : 'bg-green-600 hover:bg-green-700 text-white'
         }`}
       >
@@ -75,6 +87,8 @@ const PanicButton = ({ crewId, userId, crewName, disabled }: PanicButtonProps) =
               ⏱️ {Math.floor(panicTimeRemaining / 60000)}:{(Math.floor((panicTimeRemaining % 60000) / 1000)).toString().padStart(2, '0')}
             </span>
           </span>
+        ) : isPanicButtonDisabled() ? (
+          'КНОПКА ПАНИКИ ЗАБЛОКИРОВАНА'
         ) : (
           'КНОПКА ПАНИКИ'
         )}

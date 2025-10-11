@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import Icon from '@/components/ui/icon';
 import { type User } from '@/lib/auth';
-import { getUserSettings, updateUserSettings, getSystemLockdown, activateSystemLockdown, deactivateSystemLockdown } from '@/lib/store';
+import { getUserSettings, updateUserSettings, getSystemLockdown, activateSystemLockdown, deactivateSystemLockdown, getSystemRestrictions, updateSystemRestrictions } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { useSync } from '@/hooks/use-sync';
 
@@ -22,6 +22,9 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
   const [statusNotifications, setStatusNotifications] = useState(true);
   const [systemLocked, setSystemLocked] = useState(false);
   const [lockdownDialog, setLockdownDialog] = useState(false);
+  const [dispatcherSystemDisabled, setDispatcherSystemDisabled] = useState(false);
+  const [signal100Disabled, setSignal100Disabled] = useState(false);
+  const [panicButtonDisabled, setPanicButtonDisabled] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -30,15 +33,25 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
       setStatusNotifications(settings.statusNotifications);
     }
     setSystemLocked(getSystemLockdown().active);
+    
+    const restrictions = getSystemRestrictions();
+    setDispatcherSystemDisabled(restrictions.dispatcherSystemDisabled);
+    setSignal100Disabled(restrictions.signal100Disabled);
+    setPanicButtonDisabled(restrictions.panicButtonDisabled);
   }, [currentUser]);
 
-  useSync(['system_lockdown_changed', 'user_settings_changed'], () => {
+  useSync(['system_lockdown_changed', 'user_settings_changed', 'system_restrictions_changed'], () => {
     if (currentUser) {
       const settings = getUserSettings(currentUser.id);
       setSoundOnNewCall(settings.soundOnNewCall);
       setStatusNotifications(settings.statusNotifications);
     }
     setSystemLocked(getSystemLockdown().active);
+    
+    const restrictions = getSystemRestrictions();
+    setDispatcherSystemDisabled(restrictions.dispatcherSystemDisabled);
+    setSignal100Disabled(restrictions.signal100Disabled);
+    setPanicButtonDisabled(restrictions.panicButtonDisabled);
   }, 1000);
 
   const handleSoundToggle = (checked: boolean) => {
@@ -86,6 +99,39 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
       });
       setLockdownDialog(false);
     }
+  };
+
+  const handleDispatcherSystemToggle = (checked: boolean) => {
+    updateSystemRestrictions({ dispatcherSystemDisabled: checked });
+    toast({
+      title: checked ? 'Система диспетчеров отключена' : 'Система диспетчеров включена',
+      description: checked 
+        ? 'Все диспетчеры сняты с дежурства. Заступить на дежурство невозможно.'
+        : 'Диспетчеры могут заступать на дежурство',
+      variant: checked ? 'destructive' : 'default'
+    });
+  };
+
+  const handleSignal100Toggle = (checked: boolean) => {
+    updateSystemRestrictions({ signal100Disabled: checked });
+    toast({
+      title: checked ? 'Сигнал 100 заблокирован' : 'Сигнал 100 разблокирован',
+      description: checked 
+        ? 'Никто не может активировать Сигнал 100'
+        : 'Сигнал 100 доступен для активации',
+      variant: checked ? 'destructive' : 'default'
+    });
+  };
+
+  const handlePanicButtonToggle = (checked: boolean) => {
+    updateSystemRestrictions({ panicButtonDisabled: checked });
+    toast({
+      title: checked ? 'Кнопка паники заблокирована' : 'Кнопка паники разблокирована',
+      description: checked 
+        ? 'Никто не может нажать кнопку паники'
+        : 'Кнопка паники доступна для использования',
+      variant: checked ? 'destructive' : 'default'
+    });
   };
 
   return (
@@ -210,41 +256,118 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
       </Card>
 
       {currentUser?.role === 'manager' && (
-        <Card className="border-destructive">
-          <CardHeader>
-            <CardTitle className="text-destructive">Блокировка системы</CardTitle>
-            <CardDescription>Экстренная блокировка доступа для всех пользователей кроме менеджеров</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-              <div className="space-y-1">
-                <Label className="text-base font-semibold">
-                  {systemLocked ? '🔒 Система заблокирована' : '🔓 Система доступна'}
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  {systemLocked 
-                    ? 'Только менеджеры могут войти в систему'
-                    : 'Все пользователи могут входить в систему'
-                  }
-                </p>
-              </div>
-              <Switch 
-                checked={systemLocked} 
-                onCheckedChange={handleLockdownToggle}
-                className="data-[state=checked]:bg-destructive"
-              />
-            </div>
-            {systemLocked && (
-              <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                <Icon name="AlertTriangle" size={20} className="text-destructive mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-semibold text-destructive">Система заблокирована</p>
-                  <p className="text-muted-foreground">Все пользователи кроме менеджеров вышли из системы и не могут войти обратно до снятия блокировки.</p>
+        <>
+          <Card className="border-destructive">
+            <CardHeader>
+              <CardTitle className="text-destructive">Блокировка системы</CardTitle>
+              <CardDescription>Экстренная блокировка доступа для всех пользователей кроме менеджеров</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                <div className="space-y-1">
+                  <Label className="text-base font-semibold">
+                    {systemLocked ? '🔒 Система заблокирована' : '🔓 Система доступна'}
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {systemLocked 
+                      ? 'Только менеджеры могут войти в систему'
+                      : 'Все пользователи могут входить в систему'
+                    }
+                  </p>
                 </div>
+                <Switch 
+                  checked={systemLocked} 
+                  onCheckedChange={handleLockdownToggle}
+                  className="data-[state=checked]:bg-destructive"
+                />
               </div>
-            )}
-          </CardContent>
-        </Card>
+              {systemLocked && (
+                <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <Icon name="AlertTriangle" size={20} className="text-destructive mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-semibold text-destructive">Система заблокирована</p>
+                    <p className="text-muted-foreground">Все пользователи кроме менеджеров вышли из системы и не могут войти обратно до снятия блокировки.</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-warning">
+            <CardHeader>
+              <CardTitle className="text-warning">Системные ограничения</CardTitle>
+              <CardDescription>Блокировка отдельных функций системы для всех пользователей</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                <div className="space-y-1">
+                  <Label className="text-base font-semibold">
+                    Система диспетчеров
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {dispatcherSystemDisabled 
+                      ? 'Заступить на дежурство невозможно. Все диспетчеры сняты.'
+                      : 'Диспетчеры могут заступать на дежурство'
+                    }
+                  </p>
+                </div>
+                <Switch 
+                  checked={dispatcherSystemDisabled} 
+                  onCheckedChange={handleDispatcherSystemToggle}
+                  className="data-[state=checked]:bg-warning"
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                <div className="space-y-1">
+                  <Label className="text-base font-semibold">
+                    Сигнал 100
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {signal100Disabled 
+                      ? 'Активация Сигнала 100 заблокирована'
+                      : 'Сигнал 100 доступен для активации'
+                    }
+                  </p>
+                </div>
+                <Switch 
+                  checked={signal100Disabled} 
+                  onCheckedChange={handleSignal100Toggle}
+                  className="data-[state=checked]:bg-warning"
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                <div className="space-y-1">
+                  <Label className="text-base font-semibold">
+                    Кнопка паники
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {panicButtonDisabled 
+                      ? 'Нажатие кнопки паники заблокировано'
+                      : 'Кнопка паники доступна для использования'
+                    }
+                  </p>
+                </div>
+                <Switch 
+                  checked={panicButtonDisabled} 
+                  onCheckedChange={handlePanicButtonToggle}
+                  className="data-[state=checked]:bg-warning"
+                />
+              </div>
+
+              {(dispatcherSystemDisabled || signal100Disabled || panicButtonDisabled) && (
+                <div className="flex items-start gap-2 p-3 bg-warning/10 border border-warning/20 rounded-lg">
+                  <Icon name="ShieldAlert" size={20} className="text-warning mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-semibold text-warning">Активны системные ограничения</p>
+                    <p className="text-muted-foreground">Некоторые функции системы заблокированы для всех пользователей.</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
       )}
 
       <AlertDialog open={lockdownDialog} onOpenChange={setLockdownDialog}>

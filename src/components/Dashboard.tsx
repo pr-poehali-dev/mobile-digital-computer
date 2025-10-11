@@ -15,7 +15,7 @@ import DispatcherPanicAlert from './DispatcherPanicAlert';
 import Signal100Alert from './Signal100Alert';
 import { type User } from '@/lib/auth';
 import { canManageAccounts } from '@/lib/permissions';
-import { startDispatcherShift, endDispatcherShift, isUserOnDuty, getActiveDispatcherShifts } from '@/lib/store';
+import { startDispatcherShift, endDispatcherShift, isUserOnDuty, getActiveDispatcherShifts, isDispatcherSystemDisabled } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { useSync } from '@/hooks/use-sync';
 
@@ -38,10 +38,19 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
     }
   };
 
-  useSync(['dispatcher_shift_changed'], updateStatus, 2000);
+  useSync(['dispatcher_shift_changed', 'system_restrictions_changed'], updateStatus, 2000);
 
   const handleToggleDuty = () => {
     if (!currentUser) return;
+    
+    if (isDispatcherSystemDisabled() && !isOnDuty) {
+      toast({
+        title: 'Система диспетчеров отключена',
+        description: 'Менеджер заблокировал возможность заступать на дежурство',
+        variant: 'destructive'
+      });
+      return;
+    }
     
     if (isOnDuty) {
       endDispatcherShift(currentUser.id);
@@ -101,6 +110,7 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
                     variant={isOnDuty ? 'destructive' : 'default'}
                     size="sm"
                     className="gap-2"
+                    disabled={isDispatcherSystemDisabled() && !isOnDuty}
                   >
                     <Icon name={isOnDuty ? 'LogOut' : 'LogIn'} size={16} />
                     {isOnDuty ? 'Покинуть дежурство' : 'Заступить на дежурство'}
