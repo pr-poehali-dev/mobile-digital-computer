@@ -272,7 +272,7 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="userId">ID пользователя *</Label>
+              <Label htmlFor="userId">ID *</Label>
               <Input
                 id="userId"
                 value={formData.userId}
@@ -281,7 +281,7 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
                 maxLength={5}
                 pattern="[0-9]{5}"
               />
-              <p className="text-xs text-muted-foreground">Ровно 5 цифр</p>
+              <p className="text-xs text-muted-foreground">Ровно 5 цифр. Используется для входа в систему</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Пароль *</Label>

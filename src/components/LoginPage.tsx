@@ -64,7 +64,7 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
             )}
             
             <div className="space-y-2">
-              <Label htmlFor="userId">ID сотрудника</Label>
+              <Label htmlFor="userId">ID</Label>
               <Input
                 id="userId"
                 type="text"

@@ -38,7 +38,7 @@ const ProfileDialog = ({ open, onOpenChange, user }: ProfileDialogProps) => {
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label>ID сотрудника</Label>
+            <Label>ID</Label>
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="text-lg font-mono px-4 py-2">
                 #{user.id}
