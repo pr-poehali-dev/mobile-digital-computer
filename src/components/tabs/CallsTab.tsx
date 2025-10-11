@@ -61,13 +61,13 @@ const CallsTab = ({ currentUser }: CallsTabProps) => {
   });
   const { toast } = useToast();
 
-  useSync(['calls_updated', 'crews_updated'], loadData, 2000);
-
   const loadData = () => {
     setCalls(getCalls());
     setCrews(getCrews());
     setDispatchers(getAllUsers().filter(u => u.role === 'dispatcher'));
   };
+
+  useSync(['calls_updated', 'crews_updated'], loadData, 2000);
 
   const handleDelete = () => {
     if (deleteDialog.type === 'one' && deleteDialog.callId) {
