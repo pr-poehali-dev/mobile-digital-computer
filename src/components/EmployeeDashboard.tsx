@@ -77,7 +77,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
   useSync(['dispatcher_shift_changed', 'crews_updated', 'calls_updated'], loadData, 2000);
   useSync(['online_users_changed'], loadAvailableUsers, 2000);
 
-  const handleCreateCrew = () => {
+  const handleCreateCrew = async () => {
     if (isDispatcherOnDuty()) {
       toast({ title: 'Недоступно', description: 'Диспетчер на дежурстве. Обратитесь к диспетчеру.', variant: 'destructive' });
       setCreateDialog(false);
@@ -90,7 +90,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
     if (!crewFormData.members.includes(currentUser!.id)) {
       crewFormData.members.push(currentUser!.id);
     }
-    createCrew(crewFormData.unitName, crewFormData.members, currentUser!.id);
+    await createCrew(crewFormData.unitName, crewFormData.members, currentUser!.id);
     setCreateDialog(false);
     setCrewFormData({ unitName: '', members: [] });
     toast({ title: 'Экипаж создан', description: `Экипаж ${crewFormData.unitName} успешно создан` });
@@ -104,14 +104,14 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
     setCreateDialog(true);
   };
 
-  const handleDeleteCrew = () => {
+  const handleDeleteCrew = async () => {
     if (!myCrew) return;
     if (dispatcherOnDuty) {
       toast({ title: 'Недоступно', description: 'Диспетчер на дежурстве. Обратитесь к диспетчеру.', variant: 'destructive' });
       setDeleteDialog(false);
       return;
     }
-    deleteCrew(myCrew.id, currentUser!.id);
+    await deleteCrew(myCrew.id, currentUser!.id);
     loadData();
     setDeleteDialog(false);
     toast({ title: 'Экипаж удален', description: 'Ваш экипаж удален из системы' });
@@ -136,11 +136,12 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
       return;
     }
     
-    updateCrewStatus(myCrew.id, newStatus, undefined, currentUser!.id);
-    loadData();
-    toast({
-      title: 'Статус обновлен',
-      description: `Ваш экипаж теперь: ${getStatusConfig(newStatus).label}`,
+    updateCrewStatus(myCrew.id, newStatus, undefined, currentUser!.id).then(() => {
+      loadData();
+      toast({
+        title: 'Статус обновлен',
+        description: `Ваш экипаж теперь: ${getStatusConfig(newStatus).label}`,
+      });
     });
   };
 

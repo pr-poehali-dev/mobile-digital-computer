@@ -105,9 +105,9 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
     setCreateDialog(true);
   };
 
-  const handleSaveStatus = () => {
+  const handleSaveStatus = async () => {
     if (editDialog.crew) {
-      updateCrewStatus(editDialog.crew.id, formData.status, formData.location, currentUser?.id);
+      await updateCrewStatus(editDialog.crew.id, formData.status, formData.location, currentUser?.id);
       loadCrews();
       setEditDialog({ open: false, crew: null });
       toast({
@@ -117,7 +117,7 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
     }
   };
 
-  const handleSaveManage = () => {
+  const handleSaveManage = async () => {
     if (manageDialog.crew) {
       if (crewFormData.members.length === 0) {
         toast({
@@ -127,7 +127,7 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
         });
         return;
       }
-      updateCrew(
+      await updateCrew(
         manageDialog.crew.id,
         crewFormData.unitName,
         crewFormData.members,
@@ -141,7 +141,7 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
     }
   };
 
-  const handleCreateCrew = () => {
+  const handleCreateCrew = async () => {
     if (!crewFormData.unitName) {
       toast({
         title: "Ошибка",
@@ -158,7 +158,7 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
       });
       return;
     }
-    createCrew(crewFormData.unitName, crewFormData.members, currentUser?.id);
+    await createCrew(crewFormData.unitName, crewFormData.members, currentUser?.id);
     loadCrews();
     setCreateDialog(false);
     toast({
@@ -167,9 +167,9 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
     });
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteDialog.crewId) {
-      deleteCrew(deleteDialog.crewId, currentUser?.id);
+      await deleteCrew(deleteDialog.crewId, currentUser?.id);
       loadCrews();
       setDeleteDialog({ open: false, crewId: null });
       toast({

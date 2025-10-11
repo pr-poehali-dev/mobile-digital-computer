@@ -1,4 +1,5 @@
 import { type User } from './auth';
+import { fetchCrews, createCrewAPI, updateCrewAPI, deleteCrewAPI } from './crews-api';
 
 // ============================================================================
 // TYPES
@@ -365,6 +366,12 @@ export const changeUserId = (oldUserId: string, newUserId: string): boolean => {
 // ============================================================================
 
 export const getCrews = (): Crew[] => {
+  fetchCrews().then(crews => {
+    if (crews.length > 0) {
+      storage.set(KEYS.CREWS, crews);
+    }
+  }).catch(err => console.error('Error syncing crews:', err));
+  
   return storage.get<Crew[]>(KEYS.CREWS, []);
 };
 
@@ -373,57 +380,76 @@ export const saveCrews = (crews: Crew[]): void => {
   syncManager.notify('crews_updated');
 };
 
-export const createCrew = (unitName: string, members: string[], creatorId?: string): Crew => {
-  const crews = getCrews();
-  const newId = crews.length > 0 ? Math.max(...crews.map(c => c.id)) + 1 : 1;
-  const newCrew: Crew = {
-    id: newId,
+export const createCrew = async (unitName: string, members: string[], creatorId?: string): Promise<Crew | null> => {
+  const newCrew: Omit<Crew, 'id' | 'lastUpdate'> = {
     unitName,
     status: 'available',
     location: 'Станция',
-    lastUpdate: new Date().toISOString(),
     members
   };
   
-  saveCrews([...crews, newCrew]);
+  const newId = await createCrewAPI(newCrew);
   
-  if (creatorId) {
-    const users = getAllUsers();
-    const user = users.find(u => u.id === creatorId);
-    addActivityLog({
-      type: 'crew_created',
-      userId: creatorId,
-      userName: user?.fullName || 'Неизвестный',
-      crewId: newId,
-      crewName: unitName,
-      description: `Создан экипаж ${unitName}`,
-      details: `Состав: ${members.length} чел.`
-    });
+  if (newId) {
+    const fullCrew: Crew = {
+      ...newCrew,
+      id: newId,
+      lastUpdate: new Date().toISOString()
+    };
+    
+    const crews = storage.get<Crew[]>(KEYS.CREWS, []);
+    storage.set(KEYS.CREWS, [...crews, fullCrew]);
+    syncManager.notify('crews_updated');
+    
+    if (creatorId) {
+      const users = getAllUsers();
+      const user = users.find(u => u.id === creatorId);
+      addActivityLog({
+        type: 'crew_created',
+        userId: creatorId,
+        userName: user?.fullName || 'Неизвестный',
+        crewId: newId,
+        crewName: unitName,
+        description: `Создан экипаж ${unitName}`,
+        details: `Состав: ${members.length} чел.`
+      });
+    }
+    
+    return fullCrew;
   }
   
-  return newCrew;
+  return null;
 };
 
-export const updateCrew = (crewId: number, unitName: string, members: string[]): void => {
-  const crews = getCrews();
-  saveCrews(
-    crews.map(c => 
-      c.id === crewId ? { ...c, unitName, members, lastUpdate: new Date().toISOString() } : c
-    )
-  );
-};
-
-export const updateCrewStatus = (crewId: number, status: Crew['status'], location?: string, userId?: string): void => {
-  const crews = getCrews();
+export const updateCrew = async (crewId: number, unitName: string, members: string[]): Promise<void> => {
+  const crews = storage.get<Crew[]>(KEYS.CREWS, []);
   const crew = crews.find(c => c.id === crewId);
   
-  saveCrews(
-    crews.map(c => 
-      c.id === crewId 
-        ? { ...c, status, location: location || c.location, lastUpdate: new Date().toISOString() } 
-        : c
-    )
-  );
+  if (crew) {
+    const updatedCrew = { ...crew, unitName, members, lastUpdate: new Date().toISOString() };
+    await updateCrewAPI(updatedCrew);
+    
+    storage.set(KEYS.CREWS, crews.map(c => c.id === crewId ? updatedCrew : c));
+    syncManager.notify('crews_updated');
+  }
+};
+
+export const updateCrewStatus = async (crewId: number, status: Crew['status'], location?: string, userId?: string): Promise<void> => {
+  const crews = storage.get<Crew[]>(KEYS.CREWS, []);
+  const crew = crews.find(c => c.id === crewId);
+  
+  if (crew) {
+    const updatedCrew = { 
+      ...crew, 
+      status, 
+      location: location || crew.location, 
+      lastUpdate: new Date().toISOString() 
+    };
+    
+    await updateCrewAPI(updatedCrew);
+    storage.set(KEYS.CREWS, crews.map(c => c.id === crewId ? updatedCrew : c));
+    syncManager.notify('crews_updated');
+  }
   
   if (crew && userId) {
     const users = getAllUsers();
@@ -446,23 +472,28 @@ export const updateCrewStatus = (crewId: number, status: Crew['status'], locatio
   }
 };
 
-export const deleteCrew = (crewId: number, userId?: string): void => {
-  const crews = getCrews();
+export const deleteCrew = async (crewId: number, userId?: string): Promise<void> => {
+  const crews = storage.get<Crew[]>(KEYS.CREWS, []);
   const crew = crews.find(c => c.id === crewId);
   
-  saveCrews(crews.filter(c => c.id !== crewId));
+  const success = await deleteCrewAPI(crewId);
   
-  if (crew && userId) {
-    const users = getAllUsers();
-    const user = users.find(u => u.id === userId);
-    addActivityLog({
-      type: 'crew_deleted',
-      userId,
-      userName: user?.fullName || 'Неизвестный',
-      crewId,
-      crewName: crew.unitName,
-      description: `Удален экипаж ${crew.unitName}`,
-    });
+  if (success) {
+    storage.set(KEYS.CREWS, crews.filter(c => c.id !== crewId));
+    syncManager.notify('crews_updated');
+    
+    if (crew && userId) {
+      const users = getAllUsers();
+      const user = users.find(u => u.id === userId);
+      addActivityLog({
+        type: 'crew_deleted',
+        userId,
+        userName: user?.fullName || 'Неизвестный',
+        crewId,
+        crewName: crew.unitName,
+        description: `Удален экипаж ${crew.unitName}`,
+      });
+    }
   }
 };
 
