@@ -230,13 +230,14 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
     );
   }
 
+  const canEditUser = (user: User) => {
+    if (currentUser?.role === 'manager') return true;
+    if (currentUser?.role === 'supervisor' && user.role !== 'manager') return true;
+    return false;
+  };
+
   return (
     <div className="space-y-6">
-      {/* DEBUG: показать статус */}
-      <div className="p-4 bg-yellow-100 dark:bg-yellow-900 rounded text-sm">
-        <strong>DEBUG:</strong> currentUser={currentUser?.fullName || 'null'} | role={currentUser?.role || 'null'} | canManage={canManageUsers ? 'ДА' : 'НЕТ'}
-      </div>
-      
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -276,14 +277,19 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
                   <TableCell className="text-muted-foreground">{user.email}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(user)}>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => handleEdit(user)}
+                        disabled={!canEditUser(user)}
+                      >
                         <Icon name="Edit" size={16} />
                       </Button>
                       <Button 
                         variant="ghost" 
                         size="icon" 
                         onClick={() => setDeleteDialog({ open: true, userId: user.id })}
-                        disabled={user.id === currentUser?.id}
+                        disabled={user.id === currentUser?.id || !canEditUser(user)}
                       >
                         <Icon name="Trash2" size={16} className="text-destructive" />
                       </Button>
