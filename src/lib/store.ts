@@ -297,6 +297,11 @@ export const getOnlineUsers = (): User[] => {
   return [];
 };
 
+// BroadcastChannel для синхронизации между вкладками
+const broadcastChannel = typeof BroadcastChannel !== 'undefined' 
+  ? new BroadcastChannel('mdc_sync') 
+  : null;
+
 export const addOnlineUser = (user: User): void => {
   const onlineKey = 'mdc_online_users';
   const online = getOnlineUsers();
@@ -306,6 +311,7 @@ export const addOnlineUser = (user: User): void => {
     localStorage.setItem('mdc_online_users_timestamp', Date.now().toString());
     console.log('User went online:', user.fullName);
     window.dispatchEvent(new CustomEvent('online_users_changed'));
+    broadcastChannel?.postMessage({ type: 'online_users_changed' });
   }
 };
 
@@ -317,6 +323,7 @@ export const removeOnlineUser = (userId: string): void => {
   localStorage.setItem('mdc_online_users_timestamp', Date.now().toString());
   console.log('User went offline:', userId);
   window.dispatchEvent(new CustomEvent('online_users_changed'));
+  broadcastChannel?.postMessage({ type: 'online_users_changed' });
 };
 
 export const getAvailableCrewMembers = (): User[] => {
@@ -340,6 +347,7 @@ export const startDispatcherShift = (dispatcher: User): void => {
     localStorage.setItem('mdc_dispatcher_shifts_timestamp', Date.now().toString());
     console.log('Dispatcher shift started:', dispatcher.fullName);
     window.dispatchEvent(new CustomEvent('dispatcher_shift_changed'));
+    broadcastChannel?.postMessage({ type: 'dispatcher_shift_changed' });
   }
 };
 
@@ -350,6 +358,7 @@ export const endDispatcherShift = (dispatcherId: string): void => {
   localStorage.setItem('mdc_dispatcher_shifts_timestamp', Date.now().toString());
   console.log('Dispatcher shift ended:', dispatcherId);
   window.dispatchEvent(new CustomEvent('dispatcher_shift_changed'));
+  broadcastChannel?.postMessage({ type: 'dispatcher_shift_changed' });
 };
 
 export const getActiveDispatcherShifts = (): DispatcherShift[] => {

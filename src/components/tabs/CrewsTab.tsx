@@ -144,9 +144,25 @@ const CrewsTab = () => {
       loadAvailableUsers();
     };
 
+    // BroadcastChannel для синхронизации между вкладками
+    const broadcastChannel = typeof BroadcastChannel !== 'undefined' 
+      ? new BroadcastChannel('mdc_sync') 
+      : null;
+    
+    const handleBroadcast = (event: MessageEvent) => {
+      console.log('Broadcast message received:', event.data);
+      if (event.data.type === 'online_users_changed') {
+        loadAvailableUsers();
+      }
+      if (event.data.type === 'crews_updated') {
+        loadCrews();
+      }
+    };
+
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('crews_updated', handleCrewsUpdate);
     window.addEventListener('online_users_changed', handleOnlineUsersUpdate);
+    broadcastChannel?.addEventListener('message', handleBroadcast);
     
     const interval = setInterval(() => {
       loadCrews();
@@ -157,6 +173,8 @@ const CrewsTab = () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('crews_updated', handleCrewsUpdate);
       window.removeEventListener('online_users_changed', handleOnlineUsersUpdate);
+      broadcastChannel?.removeEventListener('message', handleBroadcast);
+      broadcastChannel?.close();
       clearInterval(interval);
     };
   }, []);

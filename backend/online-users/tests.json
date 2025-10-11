@@ -1,0 +1,37 @@
+{
+  "tests": [
+    {
+      "name": "Get online users",
+      "method": "GET",
+      "path": "/?resource=users",
+      "expectedStatus": 200,
+      "expectedBody": [],
+      "bodyMatcher": "type"
+    },
+    {
+      "name": "Add user heartbeat",
+      "method": "POST",
+      "path": "/?resource=users",
+      "body": {
+        "user_id": "test123",
+        "full_name": "Test User",
+        "role": "employee",
+        "email": "test@example.com"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "user_id": "string",
+        "full_name": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Get active shifts",
+      "method": "GET",
+      "path": "/?resource=shifts",
+      "expectedStatus": 200,
+      "expectedBody": [],
+      "bodyMatcher": "type"
+    }
+  ]
+}

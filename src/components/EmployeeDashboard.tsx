@@ -63,13 +63,28 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
       loadData();
     };
     
+    // BroadcastChannel для синхронизации между вкладками
+    const broadcastChannel = typeof BroadcastChannel !== 'undefined' 
+      ? new BroadcastChannel('mdc_sync') 
+      : null;
+    
+    const handleBroadcast = (event: MessageEvent) => {
+      console.log('Broadcast message received:', event.data);
+      if (event.data.type === 'dispatcher_shift_changed' || event.data.type === 'online_users_changed') {
+        loadData();
+      }
+    };
+    
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('dispatcher_shift_changed', handleShiftChange);
+    broadcastChannel?.addEventListener('message', handleBroadcast);
     
     return () => {
       clearInterval(interval);
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('dispatcher_shift_changed', handleShiftChange);
+      broadcastChannel?.removeEventListener('message', handleBroadcast);
+      broadcastChannel?.close();
     };
   }, [currentUser]);
 
