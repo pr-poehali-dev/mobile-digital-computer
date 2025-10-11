@@ -23,14 +23,14 @@ interface CallsTabProps {
 
 const getPriorityConfig = (priority: Call['priority']) => {
   switch (priority) {
-    case 'urgent':
-      return { label: 'Срочно', variant: 'destructive' as const };
-    case 'high':
-      return { label: 'Высокий', variant: 'default' as const };
-    case 'medium':
-      return { label: 'Средний', variant: 'secondary' as const };
-    case 'low':
-      return { label: 'Низкий', variant: 'outline' as const };
+    case 'code99':
+      return { label: 'Код 99', variant: 'destructive' as const, color: 'bg-red-500 hover:bg-red-600' };
+    case 'code3':
+      return { label: 'Код 3', variant: 'default' as const, color: 'bg-yellow-500 hover:bg-yellow-600' };
+    case 'code2':
+      return { label: 'Код 2', variant: 'secondary' as const, color: 'bg-green-500 hover:bg-green-600' };
+    default:
+      return { label: 'Код 2', variant: 'secondary' as const, color: 'bg-green-500 hover:bg-green-600' };
   }
 };
 
@@ -56,7 +56,7 @@ const CallsTab = ({ currentUser }: CallsTabProps) => {
   const [formData, setFormData] = useState({
     address: '',
     type: '',
-    priority: 'medium' as Call['priority'],
+    priority: 'code2' as Call['priority'],
     status: 'pending' as Call['status']
   });
   const { toast } = useToast();
@@ -133,7 +133,7 @@ const CallsTab = ({ currentUser }: CallsTabProps) => {
     
     loadData();
     setCreateDialog(false);
-    setFormData({ address: '', type: '', priority: 'medium', status: 'pending' });
+    setFormData({ address: '', type: '', priority: 'code2', status: 'pending' });
     
     toast({
       title: 'Вызов создан',
@@ -274,7 +274,7 @@ const CallsTab = ({ currentUser }: CallsTabProps) => {
                       <TableCell className="max-w-[200px] truncate">{call.address}</TableCell>
                       <TableCell>{call.type}</TableCell>
                       <TableCell>
-                        <Badge variant={priorityConfig.variant}>{priorityConfig.label}</Badge>
+                        <Badge className={priorityConfig.color + ' text-white border-0'}>{priorityConfig.label}</Badge>
                       </TableCell>
                       <TableCell>
                         <span className={`font-medium ${statusConfig.color}`}>{statusConfig.label}</span>
@@ -379,10 +379,9 @@ const CallsTab = ({ currentUser }: CallsTabProps) => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Низкий</SelectItem>
-                  <SelectItem value="medium">Средний</SelectItem>
-                  <SelectItem value="high">Высокий</SelectItem>
-                  <SelectItem value="urgent">Срочно</SelectItem>
+                  <SelectItem value="code2">Код 2 (зелёный)</SelectItem>
+                  <SelectItem value="code3">Код 3 (жёлтый)</SelectItem>
+                  <SelectItem value="code99">Код 99 (красный)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

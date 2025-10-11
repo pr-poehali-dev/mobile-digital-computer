@@ -12,14 +12,14 @@ interface EmployeeTabsContentProps {
 
 const getPriorityConfig = (priority: Call['priority']) => {
   switch (priority) {
-    case 'urgent':
-      return { label: 'Критический', color: 'text-destructive', bgColor: 'bg-destructive/10' };
-    case 'high':
-      return { label: 'Высокий', color: 'text-orange-500', bgColor: 'bg-orange-500/10' };
-    case 'medium':
-      return { label: 'Средний', color: 'text-yellow-500', bgColor: 'bg-yellow-500/10' };
-    case 'low':
-      return { label: 'Низкий', color: 'text-blue-500', bgColor: 'bg-blue-500/10' };
+    case 'code99':
+      return { label: 'Код 99', color: 'text-white', bgColor: 'bg-red-500' };
+    case 'code3':
+      return { label: 'Код 3', color: 'text-white', bgColor: 'bg-yellow-500' };
+    case 'code2':
+      return { label: 'Код 2', color: 'text-white', bgColor: 'bg-green-500' };
+    default:
+      return { label: 'Код 2', color: 'text-white', bgColor: 'bg-green-500' };
   }
 };
 
@@ -142,22 +142,22 @@ const EmployeeTabsContent = ({ activeTab, myCalls, userId }: EmployeeTabsContent
           </Card>
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Критичных</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Код 99</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <Icon name="AlertCircle" size={20} className="text-destructive" />
+                <Icon name="AlertCircle" size={20} className="text-red-500" />
                 <p className="text-3xl font-bold">{stats.urgentCalls}</p>
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Высокий приоритет</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Код 3</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <Icon name="TrendingUp" size={20} className="text-orange-500" />
+                <Icon name="TrendingUp" size={20} className="text-yellow-500" />
                 <p className="text-3xl font-bold">{stats.highPriority}</p>
               </div>
             </CardContent>
@@ -175,7 +175,7 @@ const EmployeeTabsContent = ({ activeTab, myCalls, userId }: EmployeeTabsContent
                 • Эффективность:{' '}
                 {stats.totalCalls > 0 ? Math.round((stats.completedCalls / stats.totalCalls) * 100) : 0}%
               </p>
-              <p>• Критичных вызовов обработано: {stats.urgentCalls}</p>
+              <p>• Код 99 вызовов обработано: {stats.urgentCalls}</p>
             </div>
           </CardContent>
         </Card>

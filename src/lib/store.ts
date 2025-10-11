@@ -10,7 +10,7 @@ export interface Call {
   time: string;
   address: string;
   type: string;
-  priority: 'urgent' | 'high' | 'medium' | 'low';
+  priority: 'code99' | 'code3' | 'code2';
   status: 'pending' | 'dispatched' | 'completed';
   assignedUnit?: string;
   assignedCrewId?: number;
@@ -124,7 +124,7 @@ const defaultCalls: Call[] = [
     time: '13:48', 
     address: 'ул. Ленина, 45', 
     type: 'ДТП', 
-    priority: 'urgent', 
+    priority: 'code99', 
     status: 'dispatched', 
     assignedUnit: 'NU-12', 
     assignedCrewId: 2, 
@@ -137,7 +137,7 @@ const defaultCalls: Call[] = [
     time: '13:45', 
     address: 'пр. Победы, 23', 
     type: 'Пожар', 
-    priority: 'urgent', 
+    priority: 'code99', 
     status: 'pending', 
     createdAt: new Date().toISOString() 
   },
@@ -736,7 +736,7 @@ export const getDispatcherStats = (dispatcherId: string) => {
     completedCalls: dispatcherCalls.filter(c => c.status === 'completed').length,
     activeCalls: dispatcherCalls.filter(c => c.status === 'dispatched').length,
     pendingCalls: dispatcherCalls.filter(c => c.status === 'pending').length,
-    urgentCalls: dispatcherCalls.filter(c => c.priority === 'urgent').length,
+    urgentCalls: dispatcherCalls.filter(c => c.priority === 'code99').length,
   };
 };
 
@@ -756,8 +756,8 @@ export const getEmployeeStats = (userId: string) => {
     totalCalls: userCalls.length,
     completedCalls: userCalls.filter(c => c.status === 'completed').length,
     activeCalls: userCalls.filter(c => c.status === 'dispatched').length,
-    urgentCalls: userCalls.filter(c => c.priority === 'urgent').length,
-    highPriority: userCalls.filter(c => c.priority === 'high').length,
+    urgentCalls: userCalls.filter(c => c.priority === 'code99').length,
+    highPriority: userCalls.filter(c => c.priority === 'code3').length,
   };
 };
 

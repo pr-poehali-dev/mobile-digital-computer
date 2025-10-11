@@ -60,14 +60,14 @@ interface CrewDialogsProps {
 
 const getPriorityConfig = (priority: Call["priority"]) => {
   switch (priority) {
-    case "urgent":
-      return { label: "Критический", color: "text-destructive" };
-    case "high":
-      return { label: "Высокий", color: "text-orange-500" };
-    case "medium":
-      return { label: "Средний", color: "text-yellow-500" };
-    case "low":
-      return { label: "Низкий", color: "text-blue-500" };
+    case "code99":
+      return { label: "Код 99", color: "text-red-500" };
+    case "code3":
+      return { label: "Код 3", color: "text-yellow-500" };
+    case "code2":
+      return { label: "Код 2", color: "text-green-500" };
+    default:
+      return { label: "Код 2", color: "text-green-500" };
   }
 };
 
