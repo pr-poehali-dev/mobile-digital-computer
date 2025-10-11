@@ -14,6 +14,7 @@ import {
   assignCrewToCall,
   activatePanic,
   resetPanic,
+  resetSignal100,
   type Crew,
 } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
@@ -234,6 +235,18 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
     loadCrews();
   };
 
+  const handleSignal100Reset = () => {
+    if (!currentUser) return;
+    
+    resetSignal100(currentUser.id);
+    toast({
+      title: 'Сигнал 100 отменен',
+      description: 'Звуковое оповещение остановлено для всех экипажей',
+    });
+    
+    loadCrews();
+  };
+
   const toggleMember = (userId: string) => {
     setCrewFormData((prev) => ({
       ...prev,
@@ -327,6 +340,7 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
             onAssign={handleAssign}
             onStatusChange={handleStatusChange}
             onPanicToggle={handlePanicToggle}
+            onSignal100Reset={handleSignal100Reset}
           />
         ))}
       </div>

@@ -8,7 +8,8 @@ type SyncEventType =
   | 'users_updated'
   | 'dispatcher_shift_changed'
   | 'online_users_changed'
-  | 'activity_log_updated';
+  | 'activity_log_updated'
+  | 'signal100_changed';
 
 class SyncManager {
   private listeners = new Map<SyncEventType, Set<() => void>>();

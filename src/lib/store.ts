@@ -30,6 +30,9 @@ export interface Crew {
   panicActive?: boolean;
   panicTriggeredAt?: string;
   panicTriggeredBy?: string;
+  signal100Active?: boolean;
+  signal100TriggeredAt?: string;
+  signal100TriggeredBy?: string;
 }
 
 export interface Dispatcher {
@@ -46,10 +49,20 @@ export interface DispatcherShift {
   isActive: boolean;
 }
 
+export interface Signal100Alert {
+  id: string;
+  active: boolean;
+  triggeredAt: string;
+  triggeredBy: string;
+  triggeredByName: string;
+  crewId?: number;
+  crewName?: string;
+}
+
 export interface ActivityLog {
   id: string;
   timestamp: string;
-  type: 'crew_status' | 'crew_created' | 'crew_deleted' | 'call_assigned' | 'call_completed' | 'panic_activated' | 'panic_reset';
+  type: 'crew_status' | 'crew_created' | 'crew_deleted' | 'call_assigned' | 'call_completed' | 'panic_activated' | 'panic_reset' | 'signal100_activated' | 'signal100_reset';
   userId: string;
   userName: string;
   crewId?: number;
@@ -75,6 +88,7 @@ const KEYS = {
   ACTIVITY_LOG: 'mdc_activity_log',
   ONLINE_USERS: 'mdc_online_users',
   PANIC_ALERTS: 'mdc_panic_alerts',
+  SIGNAL100_ALERT: 'mdc_signal100_alert',
 } as const;
 
 
@@ -516,6 +530,8 @@ export const activatePanic = (crewId: number, userId: string): void => {
     description: `🚨 ТРЕВОГА! Экипаж ${crew.unitName} активировал кнопку паники`,
     details: crew.location || 'Местоположение неизвестно'
   });
+  
+  activateSignal100(crewId, userId);
 };
 
 export const resetPanic = (crewId: number, userId: string): void => {
@@ -577,6 +593,115 @@ export const getActivePanicAlerts = (): Crew[] => {
   });
   
   return activeAlerts;
+};
+
+// ============================================================================
+// SIGNAL 100 API
+// ============================================================================
+
+export const activateSignal100 = (crewId: number | null, userId: string): void => {
+  const users = getAllUsers();
+  const user = users.find(u => u.id === userId);
+  
+  let crewName = '';
+  
+  if (crewId !== null) {
+    const crews = getCrews();
+    const crew = crews.find(c => c.id === crewId);
+    
+    if (!crew) return;
+    
+    crewName = crew.unitName;
+    
+    const updatedCrews = crews.map(c => 
+      c.id === crewId
+        ? { 
+            ...c, 
+            signal100Active: true, 
+            signal100TriggeredAt: new Date().toISOString(),
+            signal100TriggeredBy: userId
+          }
+        : c
+    );
+    
+    storage.set(KEYS.CREWS, updatedCrews);
+    syncManager.notify('crews_updated');
+  }
+  
+  const signal100Alert: Signal100Alert = {
+    id: `SIGNAL100-${Date.now()}`,
+    active: true,
+    triggeredAt: new Date().toISOString(),
+    triggeredBy: userId,
+    triggeredByName: user?.fullName || 'Неизвестный',
+    crewId: crewId || undefined,
+    crewName: crewName || undefined
+  };
+  
+  storage.set(KEYS.SIGNAL100_ALERT, signal100Alert);
+  syncManager.notify('signal100_changed', { key: KEYS.SIGNAL100_ALERT, value: signal100Alert });
+  
+  addActivityLog({
+    type: 'signal100_activated',
+    userId,
+    userName: user?.fullName || 'Неизвестный',
+    crewId: crewId || undefined,
+    crewName: crewName || undefined,
+    description: `🟡 СИГНАЛ 100 активирован`,
+    details: crewName ? `Экипаж: ${crewName}` : 'Активирован диспетчером'
+  });
+};
+
+export const resetSignal100 = (userId: string): void => {
+  const users = getAllUsers();
+  const user = users.find(u => u.id === userId);
+  const signal100 = getActiveSignal100();
+  
+  if (!signal100) return;
+  
+  const crews = getCrews();
+  const updatedCrews = crews.map(c => ({
+    ...c,
+    signal100Active: false,
+    signal100TriggeredAt: undefined,
+    signal100TriggeredBy: undefined
+  }));
+  
+  storage.set(KEYS.CREWS, updatedCrews);
+  storage.set(KEYS.SIGNAL100_ALERT, null);
+  syncManager.notify('crews_updated');
+  syncManager.notify('signal100_changed', { key: KEYS.SIGNAL100_ALERT, value: null });
+  
+  const resetReason = userId === 'system' 
+    ? 'автоматически через 10 минут'
+    : `пользователем ${user?.fullName || 'Неизвестный'}`;
+  
+  addActivityLog({
+    type: 'signal100_reset',
+    userId,
+    userName: user?.fullName || 'Система',
+    crewId: signal100.crewId,
+    crewName: signal100.crewName,
+    description: `Сигнал 100 отменен`,
+    details: `Причина: ${resetReason}`
+  });
+};
+
+export const getActiveSignal100 = (): Signal100Alert | null => {
+  const signal100 = storage.get<Signal100Alert | null>(KEYS.SIGNAL100_ALERT, null);
+  
+  if (!signal100 || !signal100.active) return null;
+  
+  const now = Date.now();
+  const triggeredTime = new Date(signal100.triggeredAt).getTime();
+  const elapsed = now - triggeredTime;
+  
+  if (elapsed >= 10 * 60 * 1000) {
+    resetSignal100('system');
+    return null;
+  }
+  
+  return signal100;
 };
 
 // ============================================================================

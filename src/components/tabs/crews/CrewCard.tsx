@@ -14,6 +14,7 @@ interface CrewCardProps {
   onAssign: (crew: Crew) => void;
   onStatusChange: (crewId: number, status: Crew["status"]) => void;
   onPanicToggle: (crewId: number, activate: boolean) => void;
+  onSignal100Reset?: () => void;
 }
 
 const getStatusConfig = (status: Crew["status"]) => {
@@ -63,6 +64,7 @@ const CrewCard = ({
   onAssign,
   onStatusChange,
   onPanicToggle,
+  onSignal100Reset,
 }: CrewCardProps) => {
   const statusConfig = getStatusConfig(crew.status);
   const lastUpdate = new Date(crew.lastUpdate).toLocaleTimeString("ru-RU", {
@@ -72,7 +74,7 @@ const CrewCard = ({
   const crewMembers = allUsers.filter((u) => crew.members.includes(u.id));
 
   return (
-    <Card className={`hover:shadow-lg transition-shadow ${crew.panicActive ? 'border-red-600 border-2' : ''}`}>
+    <Card className={`hover:shadow-lg transition-shadow ${crew.panicActive ? 'border-red-600 border-2' : crew.signal100Active ? 'border-yellow-500 border-2' : ''}`}>
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -81,6 +83,11 @@ const CrewCard = ({
               {crew.panicActive && (
                 <Badge variant="destructive" className="animate-pulse">
                   🚨 ТРЕВОГА
+                </Badge>
+              )}
+              {crew.signal100Active && (
+                <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white animate-pulse">
+                  🟡 СИГНАЛ 100
                 </Badge>
               )}
             </CardTitle>
@@ -188,20 +195,33 @@ const CrewCard = ({
           </div>
           
           {crew.status !== "unavailable" && (
-            <Button
-              onClick={() => onPanicToggle(crew.id, !crew.panicActive)}
-              disabled={false}
-              variant={crew.panicActive ? "destructive" : "default"}
-              size="sm"
-              className={`w-full gap-2 font-bold ${
-                crew.panicActive 
-                  ? 'bg-red-600 hover:bg-red-700' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              }`}
-            >
-              <Icon name="AlertTriangle" size={18} />
-              {crew.panicActive ? 'СБРОСИТЬ ТРЕВОГУ' : 'КНОПКА ПАНИКИ'}
-            </Button>
+            <>
+              <Button
+                onClick={() => onPanicToggle(crew.id, !crew.panicActive)}
+                disabled={false}
+                variant={crew.panicActive ? "destructive" : "default"}
+                size="sm"
+                className={`w-full gap-2 font-bold ${
+                  crew.panicActive 
+                    ? 'bg-red-600 hover:bg-red-700' 
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}
+              >
+                <Icon name="AlertTriangle" size={18} />
+                {crew.panicActive ? 'СБРОСИТЬ ТРЕВОГУ' : 'КНОПКА ПАНИКИ'}
+              </Button>
+              {crew.signal100Active && onSignal100Reset && (
+                <Button
+                  onClick={onSignal100Reset}
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2 border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                >
+                  <Icon name="RadioOff" size={18} />
+                  ОТМЕНИТЬ СИГНАЛ 100
+                </Button>
+              )}
+            </>
           )}
         </div>
       </CardContent>

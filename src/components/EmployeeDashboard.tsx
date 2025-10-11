@@ -19,6 +19,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import EmployeeTabsContent from './EmployeeTabsContent';
 import PanicButton from './PanicButton';
 import PanicAlert from './PanicAlert';
+import Signal100Button from './Signal100Button';
+import Signal100Alert from './Signal100Alert';
 
 interface EmployeeDashboardProps {
   onLogout: () => void;
@@ -159,6 +161,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
   return (
     <div className="min-h-screen bg-background">
       <PanicAlert currentUser={currentUser} />
+      <Signal100Alert currentUser={currentUser} />
       <header className="bg-card border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -344,12 +347,20 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
               {myCrew && !dispatcherOnDuty && (
                 <div className="px-6 pb-4 space-y-2">
                   {myCrew.status !== 'unavailable' && (
-                    <PanicButton
-                      crewId={myCrew.id}
-                      userId={currentUser.id}
-                      crewName={myCrew.unitName}
-                      disabled={myCrew.panicActive}
-                    />
+                    <>
+                      <PanicButton
+                        crewId={myCrew.id}
+                        userId={currentUser.id}
+                        crewName={myCrew.unitName}
+                        disabled={myCrew.panicActive}
+                      />
+                      <Signal100Button
+                        crewId={myCrew.id}
+                        userId={currentUser.id}
+                        crewName={myCrew.unitName}
+                        disabled={myCrew.signal100Active}
+                      />
+                    </>
                   )}
                   <Button onClick={() => setDeleteDialog(true)} variant="destructive" className="w-full" size="sm">
                     <Icon name="Trash2" size={16} className="mr-2" />
