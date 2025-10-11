@@ -17,6 +17,8 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import EmployeeTabsContent from './EmployeeTabsContent';
+import PanicButton from './PanicButton';
+import PanicAlert from './PanicAlert';
 
 interface EmployeeDashboardProps {
   onLogout: () => void;
@@ -156,6 +158,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
 
   return (
     <div className="min-h-screen bg-background">
+      <PanicAlert currentUser={currentUser} />
       <header className="bg-card border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -274,6 +277,23 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
                       <div className="p-3 bg-muted rounded-lg text-sm text-muted-foreground">
                         <Icon name="Lock" size={16} className="inline mr-2" />
                         Управление статусом через диспетчера
+                      </div>
+                    )}
+
+                    {myCrew.status !== 'unavailable' && !myCrew.panicActive && (
+                      <div className="pt-2 border-t">
+                        <PanicButton
+                          crewId={myCrew.id}
+                          userId={currentUser.id}
+                          crewName={myCrew.unitName}
+                        />
+                      </div>
+                    )}
+
+                    {myCrew.panicActive && (
+                      <div className="p-3 bg-red-100 border-2 border-red-600 rounded-lg">
+                        <p className="text-sm font-bold text-red-900">🚨 ТРЕВОГА АКТИВНА</p>
+                        <p className="text-xs text-red-700 mt-1">Ожидайте сброса диспетчером</p>
                       </div>
                     )}
                   </div>

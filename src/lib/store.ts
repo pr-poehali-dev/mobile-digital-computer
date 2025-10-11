@@ -27,6 +27,9 @@ export interface Crew {
   location?: string;
   lastUpdate: string;
   members: string[];
+  panicActive?: boolean;
+  panicTriggeredAt?: string;
+  panicTriggeredBy?: string;
 }
 
 export interface Dispatcher {
@@ -46,7 +49,7 @@ export interface DispatcherShift {
 export interface ActivityLog {
   id: string;
   timestamp: string;
-  type: 'crew_status' | 'crew_created' | 'crew_deleted' | 'call_assigned' | 'call_completed';
+  type: 'crew_status' | 'crew_created' | 'crew_deleted' | 'call_assigned' | 'call_completed' | 'panic_activated' | 'panic_reset';
   userId: string;
   userName: string;
   crewId?: number;
@@ -71,6 +74,7 @@ const KEYS = {
   DISPATCHER_SHIFTS: 'mdc_dispatcher_shifts',
   ACTIVITY_LOG: 'mdc_activity_log',
   ONLINE_USERS: 'mdc_online_users',
+  PANIC_ALERTS: 'mdc_panic_alerts',
 } as const;
 
 
@@ -450,6 +454,82 @@ export const deleteCrew = async (crewId: number, userId?: string): Promise<void>
 export const getUserCrew = (userId: string): Crew | null => {
   const crews = getCrews();
   return crews.find(c => c.members.includes(userId)) || null;
+};
+
+// ============================================================================
+// PANIC BUTTON API
+// ============================================================================
+
+export const activatePanic = (crewId: number, userId: string): void => {
+  const crews = getCrews();
+  const crew = crews.find(c => c.id === crewId);
+  
+  if (!crew) return;
+  
+  const users = getAllUsers();
+  const user = users.find(u => u.id === userId);
+  
+  const updatedCrews = crews.map(c => 
+    c.id === crewId
+      ? { 
+          ...c, 
+          panicActive: true, 
+          panicTriggeredAt: new Date().toISOString(),
+          panicTriggeredBy: userId
+        }
+      : c
+  );
+  
+  storage.set(KEYS.CREWS, updatedCrews);
+  syncManager.notify('crews_updated');
+  
+  addActivityLog({
+    type: 'panic_activated',
+    userId,
+    userName: user?.fullName || 'Неизвестный',
+    crewId,
+    crewName: crew.unitName,
+    description: `🚨 ТРЕВОГА! Экипаж ${crew.unitName} активировал кнопку паники`,
+    details: crew.location || 'Местоположение неизвестно'
+  });
+};
+
+export const resetPanic = (crewId: number, userId: string): void => {
+  const crews = getCrews();
+  const crew = crews.find(c => c.id === crewId);
+  
+  if (!crew) return;
+  
+  const users = getAllUsers();
+  const user = users.find(u => u.id === userId);
+  
+  const updatedCrews = crews.map(c => 
+    c.id === crewId
+      ? { 
+          ...c, 
+          panicActive: false, 
+          panicTriggeredAt: undefined,
+          panicTriggeredBy: undefined
+        }
+      : c
+  );
+  
+  storage.set(KEYS.CREWS, updatedCrews);
+  syncManager.notify('crews_updated');
+  
+  addActivityLog({
+    type: 'panic_reset',
+    userId,
+    userName: user?.fullName || 'Неизвестный',
+    crewId,
+    crewName: crew.unitName,
+    description: `Сигнал тревоги сброшен для экипажа ${crew.unitName}`,
+  });
+};
+
+export const getActivePanicAlerts = (): Crew[] => {
+  const crews = getCrews();
+  return crews.filter(c => c.panicActive);
 };
 
 // ============================================================================

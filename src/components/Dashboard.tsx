@@ -11,6 +11,7 @@ import LogTab from './tabs/LogTab';
 import SettingsTab from './tabs/SettingsTab';
 import AccountsTab from './tabs/AccountsTab';
 import ProfileDialog from './ProfileDialog';
+import PanicAlert from './PanicAlert';
 import { type User } from '@/lib/auth';
 import { canManageAccounts } from '@/lib/permissions';
 import { startDispatcherShift, endDispatcherShift, isUserOnDuty, getActiveDispatcherShifts } from '@/lib/store';
@@ -75,6 +76,7 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
 
   return (
     <div className="min-h-screen bg-background">
+      <PanicAlert currentUser={currentUser} />
       <header className="bg-card border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">

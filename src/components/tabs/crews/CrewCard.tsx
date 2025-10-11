@@ -68,11 +68,18 @@ const CrewCard = ({
   const crewMembers = allUsers.filter((u) => crew.members.includes(u.id));
 
   return (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card className={`hover:shadow-lg transition-shadow ${crew.panicActive ? 'border-red-600 border-2' : ''}`}>
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-lg">{crew.unitName}</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2">
+              {crew.unitName}
+              {crew.panicActive && (
+                <Badge variant="destructive" className="animate-pulse">
+                  🚨 ТРЕВОГА
+                </Badge>
+              )}
+            </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
               Обновлено: {lastUpdate}
             </p>

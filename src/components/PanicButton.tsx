@@ -1,0 +1,71 @@
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import Icon from '@/components/ui/icon';
+import { activatePanic } from '@/lib/store';
+import { useToast } from '@/hooks/use-toast';
+
+interface PanicButtonProps {
+  crewId: number;
+  userId: string;
+  crewName: string;
+  disabled?: boolean;
+}
+
+const PanicButton = ({ crewId, userId, crewName, disabled }: PanicButtonProps) => {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const { toast } = useToast();
+
+  const handleActivatePanic = () => {
+    activatePanic(crewId, userId);
+    setConfirmOpen(false);
+    
+    toast({
+      title: '🚨 ТРЕВОГА АКТИВИРОВАНА',
+      description: `Сигнал тревоги отправлен всем экипажам и диспетчерам`,
+      variant: 'destructive',
+    });
+  };
+
+  return (
+    <>
+      <Button
+        onClick={() => setConfirmOpen(true)}
+        disabled={disabled}
+        variant="destructive"
+        size="lg"
+        className="w-full gap-2 bg-red-600 hover:bg-red-700 text-white font-bold animate-pulse"
+      >
+        <Icon name="AlertTriangle" size={24} />
+        КНОПКА ПАНИКИ
+      </Button>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <Icon name="AlertTriangle" size={24} />
+              Активация кнопки паники
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Вы уверены, что хотите активировать кнопку паники для экипажа <strong>{crewName}</strong>?
+              <br /><br />
+              Это отправит <strong>звуковой сигнал тревоги</strong> всем активным экипажам и диспетчерам с вашим местоположением.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleActivatePanic}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Активировать тревогу
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+};
+
+export default PanicButton;
