@@ -9,7 +9,9 @@ import CallsTab from './tabs/CallsTab';
 import AnalyticsTab from './tabs/AnalyticsTab';
 import LogTab from './tabs/LogTab';
 import SettingsTab from './tabs/SettingsTab';
+import AccountsTab from './tabs/AccountsTab';
 import { type User } from '@/lib/auth';
+import { canManageAccounts } from '@/lib/permissions';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -85,7 +87,7 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
 
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+          <TabsList className={`grid w-full ${canManageAccounts(currentUser) ? 'grid-cols-6' : 'grid-cols-5'} lg:w-auto lg:inline-grid`}>
             <TabsTrigger value="crews" className="space-x-2">
               <Icon name="Users" size={16} />
               <span className="hidden sm:inline">Экипажи</span>
@@ -102,6 +104,12 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
               <Icon name="FileText" size={16} />
               <span className="hidden sm:inline">Журнал</span>
             </TabsTrigger>
+            {canManageAccounts(currentUser) && (
+              <TabsTrigger value="accounts" className="space-x-2">
+                <Icon name="UserCog" size={16} />
+                <span className="hidden sm:inline">Аккаунты</span>
+              </TabsTrigger>
+            )}
             <TabsTrigger value="settings" className="space-x-2">
               <Icon name="Settings" size={16} />
               <span className="hidden sm:inline">Настройки</span>
@@ -113,7 +121,7 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
           </TabsContent>
 
           <TabsContent value="calls" className="space-y-4">
-            <CallsTab />
+            <CallsTab currentUser={currentUser} />
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-4">
@@ -123,6 +131,12 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
           <TabsContent value="log" className="space-y-4">
             <LogTab />
           </TabsContent>
+
+          {canManageAccounts(currentUser) && (
+            <TabsContent value="accounts" className="space-y-4">
+              <AccountsTab currentUser={currentUser} />
+            </TabsContent>
+          )}
 
           <TabsContent value="settings" className="space-y-4">
             <SettingsTab />

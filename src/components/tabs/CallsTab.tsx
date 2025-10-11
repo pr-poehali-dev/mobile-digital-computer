@@ -1,31 +1,21 @@
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { getCalls, deleteCall, updateCallDispatcher, getAllUsers, type Call } from '@/lib/store';
+import { canDeleteCalls, canEditDispatchers } from '@/lib/permissions';
+import { type User } from '@/lib/auth';
+import { useToast } from '@/hooks/use-toast';
 
-type CallPriority = 'urgent' | 'high' | 'medium' | 'low';
-type CallStatus = 'pending' | 'dispatched' | 'completed';
-
-interface Call {
-  id: string;
-  time: string;
-  address: string;
-  type: string;
-  priority: CallPriority;
-  status: CallStatus;
-  assignedUnit?: string;
+interface CallsTabProps {
+  currentUser: User | null;
 }
 
-const mockCalls: Call[] = [
-  { id: 'C-1024', time: '13:48', address: 'ул. Ленина, 45', type: 'ДТП', priority: 'urgent', status: 'dispatched', assignedUnit: 'NU-12' },
-  { id: 'C-1023', time: '13:45', address: 'пр. Победы, 23', type: 'Пожар', priority: 'urgent', status: 'pending' },
-  { id: 'C-1022', time: '13:30', address: 'пр. Мира, 120', type: 'Медицинская помощь', priority: 'high', status: 'dispatched', assignedUnit: 'NU-15' },
-  { id: 'C-1021', time: '13:15', address: 'ул. Советская, 78', type: 'Проверка сигнализации', priority: 'medium', status: 'completed', assignedUnit: 'NU-10' },
-  { id: 'C-1020', time: '13:00', address: 'ул. Гагарина, 156', type: 'Медицинская помощь', priority: 'high', status: 'completed', assignedUnit: 'NU-07' },
-];
-
-const getPriorityConfig = (priority: CallPriority) => {
+const getPriorityConfig = (priority: Call['priority']) => {
   switch (priority) {
     case 'urgent':
       return { label: 'Срочно', variant: 'destructive' as const };
@@ -38,7 +28,7 @@ const getPriorityConfig = (priority: CallPriority) => {
   }
 };
 
-const getStatusConfig = (status: CallStatus) => {
+const getStatusConfig = (status: Call['status']) => {
   switch (status) {
     case 'pending':
       return { label: 'Ожидает', color: 'text-warning' };
@@ -49,9 +39,41 @@ const getStatusConfig = (status: CallStatus) => {
   }
 };
 
-const CallsTab = () => {
-  const pendingCount = mockCalls.filter(c => c.status === 'pending').length;
-  const activeCount = mockCalls.filter(c => c.status === 'dispatched').length;
+const CallsTab = ({ currentUser }: CallsTabProps) => {
+  const [calls, setCalls] = useState<Call[]>([]);
+  const [dispatchers, setDispatchers] = useState<User[]>([]);
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; callId: string | null }>({ open: false, callId: null });
+  const { toast } = useToast();
+
+  useEffect(() => {
+    setCalls(getCalls());
+    setDispatchers(getAllUsers().filter(u => u.role === 'dispatcher'));
+  }, []);
+
+  const handleDelete = (callId: string) => {
+    deleteCall(callId);
+    setCalls(getCalls());
+    setDeleteDialog({ open: false, callId: null });
+    toast({
+      title: 'Вызов удален',
+      description: `Вызов ${callId} успешно удален из системы`,
+    });
+  };
+
+  const handleDispatcherChange = (callId: string, dispatcherId: string) => {
+    const dispatcher = dispatchers.find(d => d.id === parseInt(dispatcherId));
+    if (dispatcher) {
+      updateCallDispatcher(callId, dispatcher.id, dispatcher.fullName);
+      setCalls(getCalls());
+      toast({
+        title: 'Диспетчер изменен',
+        description: `Вызов ${callId} назначен на ${dispatcher.fullName}`,
+      });
+    }
+  };
+
+  const pendingCount = calls.filter(c => c.status === 'pending').length;
+  const activeCount = calls.filter(c => c.status === 'dispatched').length;
 
   return (
     <div className="space-y-6">
@@ -61,7 +83,7 @@ const CallsTab = () => {
             <CardTitle className="text-sm font-medium text-muted-foreground">Всего вызовов</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{mockCalls.length}</div>
+            <div className="text-3xl font-bold">{calls.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -104,18 +126,19 @@ const CallsTab = () => {
                   <TableHead>Приоритет</TableHead>
                   <TableHead>Статус</TableHead>
                   <TableHead>Экипаж</TableHead>
+                  {canEditDispatchers(currentUser) && <TableHead>Диспетчер</TableHead>}
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mockCalls.map((call) => {
+                {calls.map((call) => {
                   const priorityConfig = getPriorityConfig(call.priority);
                   const statusConfig = getStatusConfig(call.status);
                   return (
                     <TableRow key={call.id}>
                       <TableCell className="font-medium">{call.id}</TableCell>
                       <TableCell>{call.time}</TableCell>
-                      <TableCell>{call.address}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">{call.address}</TableCell>
                       <TableCell>{call.type}</TableCell>
                       <TableCell>
                         <Badge variant={priorityConfig.variant}>{priorityConfig.label}</Badge>
@@ -124,10 +147,40 @@ const CallsTab = () => {
                         <span className={`font-medium ${statusConfig.color}`}>{statusConfig.label}</span>
                       </TableCell>
                       <TableCell>{call.assignedUnit || '—'}</TableCell>
+                      {canEditDispatchers(currentUser) && (
+                        <TableCell>
+                          <Select 
+                            value={call.dispatcherId?.toString()} 
+                            onValueChange={(value) => handleDispatcherChange(call.id, value)}
+                          >
+                            <SelectTrigger className="w-[150px]">
+                              <SelectValue placeholder="Не назначен" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {dispatchers.map(d => (
+                                <SelectItem key={d.id} value={d.id.toString()}>
+                                  {d.fullName.split(' ').map((n, i) => i === 0 ? n : n[0] + '.').join(' ')}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      )}
                       <TableCell>
-                        <Button variant="ghost" size="icon">
-                          <Icon name="Eye" size={16} />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon">
+                            <Icon name="Eye" size={16} />
+                          </Button>
+                          {canDeleteCalls(currentUser) && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => setDeleteDialog({ open: true, callId: call.id })}
+                            >
+                              <Icon name="Trash2" size={16} className="text-destructive" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -137,6 +190,26 @@ const CallsTab = () => {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, callId: null })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить вызов?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Вы уверены, что хотите удалить вызов {deleteDialog.callId}? Это действие нельзя отменить.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => deleteDialog.callId && handleDelete(deleteDialog.callId)}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Удалить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
