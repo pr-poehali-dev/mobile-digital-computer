@@ -487,9 +487,7 @@ export const removeOnlineUser = (userId: string): void => {
 };
 
 export const getAvailableCrewMembers = (): User[] => {
-  const excludedRoles = ['manager', 'dispatcher', 'supervisor'];
-  const allUsers = getAllUsers();
-  return allUsers.filter(u => !excludedRoles.includes(u.role));
+  return getAllUsers();
 };
 
 // ============================================================================
