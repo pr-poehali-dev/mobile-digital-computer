@@ -42,8 +42,6 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
   const [editDialog, setEditDialog] = useState<{ open: boolean; user: User | null }>({ open: false, user: null });
   const [createDialog, setCreateDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; userId: string | null }>({ open: false, userId: null });
-  const [changeIdDialog, setChangeIdDialog] = useState<{ open: boolean; user: User | null }>({ open: false, user: null });
-  const [newUserId, setNewUserId] = useState('');
   const [formData, setFormData] = useState({
     userId: '',
     password: '',
@@ -84,30 +82,9 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
   };
 
   const handleSaveEdit = () => {
-    if (editDialog.user) {
-      updateUser(editDialog.user.id, {
-        fullName: formData.fullName,
-        email: formData.email,
-        role: formData.role
-      });
-      loadUsers();
-      setEditDialog({ open: false, user: null });
-      toast({
-        title: 'Аккаунт обновлен',
-        description: `Данные ${formData.fullName} успешно обновлены`,
-      });
-    }
-  };
+    if (!editDialog.user) return;
 
-  const handleChangeId = (user: User) => {
-    setNewUserId('');
-    setChangeIdDialog({ open: true, user });
-  };
-
-  const handleSaveChangeId = () => {
-    if (!changeIdDialog.user) return;
-
-    if (!newUserId || newUserId.length !== 5 || !/^\d{5}$/.test(newUserId)) {
+    if (!formData.userId || formData.userId.length !== 5 || !/^\d{5}$/.test(formData.userId)) {
       toast({
         title: 'Ошибка',
         description: 'ID должен содержать ровно 5 цифр',
@@ -116,33 +93,46 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
       return;
     }
 
-    const success = changeUserId(changeIdDialog.user.id, newUserId);
-    
-    if (!success) {
-      toast({
-        title: 'Ошибка',
-        description: 'ID уже занят другим пользователем',
-        variant: 'destructive'
-      });
-      return;
+    const oldId = editDialog.user.id;
+    const newId = formData.userId;
+
+    if (oldId !== newId) {
+      const success = changeUserId(oldId, newId);
+      
+      if (!success) {
+        toast({
+          title: 'Ошибка',
+          description: 'ID уже занят другим пользователем',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      const usersData = localStorage.getItem('mdc_users');
+      if (usersData) {
+        const users = JSON.parse(usersData);
+        const updated = users.map((u: any) => 
+          u.id === oldId ? { ...u, id: newId } : u
+        );
+        localStorage.setItem('mdc_users', JSON.stringify(updated));
+      }
     }
 
-    const usersData = localStorage.getItem('mdc_users');
-    if (usersData) {
-      const users = JSON.parse(usersData);
-      const updated = users.map((u: any) => 
-        u.id === changeIdDialog.user?.id ? { ...u, id: newUserId } : u
-      );
-      localStorage.setItem('mdc_users', JSON.stringify(updated));
-    }
+    updateUser(newId, {
+      fullName: formData.fullName,
+      email: formData.email,
+      role: formData.role
+    });
 
     loadUsers();
-    setChangeIdDialog({ open: false, user: null });
+    setEditDialog({ open: false, user: null });
     toast({
-      title: 'ID изменен',
-      description: `ID пользователя ${changeIdDialog.user.fullName} успешно изменен на #${newUserId}`,
+      title: 'Аккаунт обновлен',
+      description: `Данные ${formData.fullName} успешно обновлены${oldId !== newId ? ` (ID изменен на #${newId})` : ''}`,
     });
   };
+
+
 
   const handleSaveCreate = () => {
     if (!formData.userId || formData.userId.length !== 5) {
@@ -292,15 +282,6 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        onClick={() => handleChangeId(user)}
-                        disabled={user.id === currentUser?.id}
-                        title={`Изменить ID (доступно: ${(currentUser?.role === 'manager' || currentUser?.role === 'supervisor') && user.id !== currentUser?.id})`}
-                      >
-                        <Icon name="Hash" size={16} />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
                         onClick={() => setDeleteDialog({ open: true, userId: user.id })}
                         disabled={user.id === currentUser?.id}
                       >
@@ -400,10 +381,23 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
           <DialogHeader>
             <DialogTitle>Редактировать аккаунт</DialogTitle>
             <DialogDescription>
-              ID: {editDialog.user?.id}
+              Изменение данных пользователя
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-userId">ID *</Label>
+              <Input
+                id="edit-userId"
+                value={formData.userId}
+                onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
+                placeholder="Например: 10005"
+                maxLength={5}
+                pattern="[0-9]{5}"
+                disabled={editDialog.user?.id === currentUser?.id}
+              />
+              <p className="text-xs text-muted-foreground">Ровно 5 цифр. {editDialog.user?.id === currentUser?.id ? 'Нельзя изменить свой ID' : 'Используется для входа в систему'}</p>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="edit-fullName">ФИО</Label>
               <Input
@@ -447,49 +441,6 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
             </Button>
             <Button onClick={handleSaveEdit}>
               Сохранить
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={changeIdDialog.open} onOpenChange={(open) => setChangeIdDialog({ open, user: null })}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Изменить ID пользователя</DialogTitle>
-            <DialogDescription>
-              Изменение ID для {changeIdDialog.user?.fullName}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="currentId">Текущий ID</Label>
-              <Input
-                id="currentId"
-                value={changeIdDialog.user?.id || ''}
-                disabled
-                className="font-mono"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="newUserId">Новый ID *</Label>
-              <Input
-                id="newUserId"
-                value={newUserId}
-                onChange={(e) => setNewUserId(e.target.value)}
-                placeholder="Например: 10006"
-                maxLength={5}
-                pattern="[0-9]{5}"
-                className="font-mono"
-              />
-              <p className="text-xs text-muted-foreground">Ровно 5 цифр. Используется для входа в систему</p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setChangeIdDialog({ open: false, user: null })}>
-              Отмена
-            </Button>
-            <Button onClick={handleSaveChangeId}>
-              Изменить ID
             </Button>
           </DialogFooter>
         </DialogContent>
