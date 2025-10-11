@@ -562,7 +562,7 @@ const CrewsTab = () => {
                 onChange={(e) =>
                   setCrewFormData({ ...crewFormData, unitName: e.target.value })
                 }
-                placeholder="Например: NU-10"
+                placeholder="Например: L-10"
               />
             </div>
             <div className="space-y-2">
