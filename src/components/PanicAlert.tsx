@@ -60,7 +60,6 @@ const PanicAlert = ({ currentUser }: PanicAlertProps) => {
             title: '🚨 ТРЕВОГА!',
             description: `Экипаж ${crew.unitName} активировал кнопку паники! Местоположение: ${crew.location || 'неизвестно'}`,
             variant: 'destructive',
-            duration: 10000,
           });
         }
       });

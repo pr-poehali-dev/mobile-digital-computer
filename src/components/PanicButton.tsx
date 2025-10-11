@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import Icon from '@/components/ui/icon';
-import { activatePanic } from '@/lib/store';
+import { activatePanic, getUserCrew } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
+import { useSync } from '@/hooks/use-sync';
 
 interface PanicButtonProps {
   crewId: number;
@@ -14,7 +15,33 @@ interface PanicButtonProps {
 
 const PanicButton = ({ crewId, userId, crewName, disabled }: PanicButtonProps) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [panicTimeRemaining, setPanicTimeRemaining] = useState<number>(0);
+  const [isPanicActive, setIsPanicActive] = useState(false);
   const { toast } = useToast();
+
+  const updatePanicTimer = () => {
+    const crew = getUserCrew(userId);
+    if (crew?.panicActive && crew.panicTriggeredAt) {
+      const triggeredTime = new Date(crew.panicTriggeredAt).getTime();
+      const now = Date.now();
+      const elapsed = now - triggeredTime;
+      const remaining = Math.max(0, 10 * 60 * 1000 - elapsed);
+      setPanicTimeRemaining(remaining);
+      setIsPanicActive(true);
+    } else {
+      setIsPanicActive(false);
+      setPanicTimeRemaining(0);
+    }
+  };
+
+  useSync(['crews_updated'], updatePanicTimer, 1000);
+
+  useEffect(() => {
+    if (isPanicActive) {
+      const interval = setInterval(updatePanicTimer, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [isPanicActive]);
 
   const handleActivatePanic = () => {
     activatePanic(crewId, userId);
@@ -41,7 +68,16 @@ const PanicButton = ({ crewId, userId, crewName, disabled }: PanicButtonProps) =
         }`}
       >
         <Icon name="AlertTriangle" size={18} />
-        КНОПКА ПАНИКИ
+        {disabled ? (
+          <span className="flex flex-col items-center leading-tight">
+            <span className="text-xs">ТРЕВОГА АКТИВНА</span>
+            <span className="text-xs font-mono">
+              ⏱️ {Math.floor(panicTimeRemaining / 60000)}:{(Math.floor((panicTimeRemaining % 60000) / 1000)).toString().padStart(2, '0')}
+            </span>
+          </span>
+        ) : (
+          'КНОПКА ПАНИКИ'
+        )}
       </Button>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>

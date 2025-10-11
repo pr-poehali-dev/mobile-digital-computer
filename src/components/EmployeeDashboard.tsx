@@ -49,22 +49,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<ReturnType<typeof getAvailableCrewMembers>>([]);
   const [crewFormData, setCrewFormData] = useState({ unitName: '', members: [] as string[] });
-  const [panicTimeRemaining, setPanicTimeRemaining] = useState<number>(0);
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (myCrew?.panicActive && myCrew.panicTriggeredAt) {
-      const interval = setInterval(() => {
-        const triggeredTime = new Date(myCrew.panicTriggeredAt!).getTime();
-        const now = Date.now();
-        const elapsed = now - triggeredTime;
-        const remaining = Math.max(0, 10 * 60 * 1000 - elapsed);
-        setPanicTimeRemaining(remaining);
-      }, 1000);
-
-      return () => clearInterval(interval);
-    }
-  }, [myCrew]);
 
   const loadData = () => {
     if (!currentUser) return;
@@ -274,17 +259,60 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
                     {!dispatcherOnDuty && (
                       <div className="space-y-2">
                         <p className="text-sm font-medium">Изменить статус:</p>
-                        <Select value={myCrew.status} onValueChange={(value: Crew['status']) => handleStatusChange(value)}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="available">Доступен</SelectItem>
-                            <SelectItem value="en-route">В пути</SelectItem>
-                            <SelectItem value="on-scene">На месте</SelectItem>
-                            <SelectItem value="unavailable">Недоступен</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            onClick={() => handleStatusChange('available')}
+                            disabled={myCrew.status === 'available'}
+                            variant={myCrew.status === 'available' ? 'default' : 'outline'}
+                            className={`${
+                              myCrew.status === 'available' 
+                                ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                : 'border-green-600 text-green-600 hover:bg-green-50'
+                            }`}
+                            size="sm"
+                          >
+                            Доступен
+                          </Button>
+                          <Button
+                            onClick={() => handleStatusChange('en-route')}
+                            disabled={myCrew.status === 'en-route'}
+                            variant={myCrew.status === 'en-route' ? 'default' : 'outline'}
+                            className={`${
+                              myCrew.status === 'en-route' 
+                                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                                : 'border-blue-600 text-blue-600 hover:bg-blue-50'
+                            }`}
+                            size="sm"
+                          >
+                            В пути
+                          </Button>
+                          <Button
+                            onClick={() => handleStatusChange('on-scene')}
+                            disabled={myCrew.status === 'on-scene'}
+                            variant={myCrew.status === 'on-scene' ? 'default' : 'outline'}
+                            className={`${
+                              myCrew.status === 'on-scene' 
+                                ? 'bg-yellow-600 hover:bg-yellow-700 text-white' 
+                                : 'border-yellow-600 text-yellow-600 hover:bg-yellow-50'
+                            }`}
+                            size="sm"
+                          >
+                            На месте
+                          </Button>
+                          <Button
+                            onClick={() => handleStatusChange('unavailable')}
+                            disabled={myCrew.status === 'unavailable'}
+                            variant={myCrew.status === 'unavailable' ? 'default' : 'outline'}
+                            className={`${
+                              myCrew.status === 'unavailable' 
+                                ? 'bg-gray-600 hover:bg-gray-700 text-white' 
+                                : 'border-gray-600 text-gray-600 hover:bg-gray-50'
+                            }`}
+                            size="sm"
+                          >
+                            Недоступен
+                          </Button>
+                        </div>
                       </div>
                     )}
 
@@ -295,15 +323,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
                       </div>
                     )}
 
-                    {myCrew.panicActive && (
-                      <div className="p-3 bg-red-100 border-2 border-red-600 rounded-lg">
-                        <p className="text-sm font-bold text-red-900">🚨 ТРЕВОГА АКТИВНА</p>
-                        <p className="text-xs text-red-700 mt-1">Ожидайте сброса диспетчером</p>
-                        <p className="text-xs text-red-500 mt-1 font-mono font-bold">
-                          ⏱️ Автосброс через: {Math.floor(panicTimeRemaining / 60000)}:{(Math.floor((panicTimeRemaining % 60000) / 1000)).toString().padStart(2, '0')}
-                        </p>
-                      </div>
-                    )}
+
                   </div>
                 ) : (
                   <div className="text-center py-8">

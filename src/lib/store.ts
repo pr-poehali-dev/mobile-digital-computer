@@ -543,15 +543,16 @@ export const resetPanic = (crewId: number, userId: string): void => {
 
 export const getActivePanicAlerts = (): Crew[] => {
   const crews = getCrews();
-  const now = new Date();
-  const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+  const now = Date.now();
   
   const activeAlerts = crews.filter(c => {
     if (!c.panicActive) return false;
     
     if (c.panicTriggeredAt) {
-      const triggeredTime = new Date(c.panicTriggeredAt);
-      if (triggeredTime < tenMinutesAgo) {
+      const triggeredTime = new Date(c.panicTriggeredAt).getTime();
+      const elapsed = now - triggeredTime;
+      
+      if (elapsed >= 10 * 60 * 1000) {
         resetPanic(c.id, 'system');
         return false;
       }
