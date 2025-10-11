@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import LoginPage from '@/components/LoginPage';
 import Dashboard from '@/components/Dashboard';
+import EmployeeDashboard from '@/components/EmployeeDashboard';
 import { getUserSession, clearUserSession, type User } from '@/lib/auth';
 import { addOnlineUser, removeOnlineUser } from '@/lib/store';
 
@@ -61,6 +62,10 @@ const Index = () => {
 
   if (!isAuthenticated) {
     return <LoginPage onLogin={handleLogin} />;
+  }
+
+  if (currentUser?.role === 'employee') {
+    return <EmployeeDashboard onLogout={handleLogout} currentUser={currentUser} />;
   }
 
   return <Dashboard onLogout={handleLogout} currentUser={currentUser} />;

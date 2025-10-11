@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,8 @@ import AccountsTab from './tabs/AccountsTab';
 import ProfileDialog from './ProfileDialog';
 import { type User } from '@/lib/auth';
 import { canManageAccounts } from '@/lib/permissions';
+import { startDispatcherShift, endDispatcherShift, getActiveDispatcherShift } from '@/lib/store';
+import { useToast } from '@/hooks/use-toast';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -22,6 +24,35 @@ interface DashboardProps {
 const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
   const [activeTab, setActiveTab] = useState('crews');
   const [profileOpen, setProfileOpen] = useState(false);
+  const [isOnDuty, setIsOnDuty] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const shift = getActiveDispatcherShift();
+    if (shift && currentUser && shift.dispatcherId === currentUser.id) {
+      setIsOnDuty(true);
+    }
+  }, [currentUser]);
+
+  const handleToggleDuty = () => {
+    if (!currentUser) return;
+    
+    if (isOnDuty) {
+      endDispatcherShift();
+      setIsOnDuty(false);
+      toast({
+        title: 'Дежурство завершено',
+        description: 'Вы покинули дежурство. Сотрудники могут управлять статусами самостоятельно.',
+      });
+    } else {
+      startDispatcherShift(currentUser);
+      setIsOnDuty(true);
+      toast({
+        title: 'Дежурство начато',
+        description: 'Вы заступили на дежурство. Управление статусами через диспетчера.',
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -38,6 +69,17 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              {currentUser?.role === 'dispatcher' && (
+                <Button
+                  onClick={handleToggleDuty}
+                  variant={isOnDuty ? 'destructive' : 'default'}
+                  size="sm"
+                  className="gap-2"
+                >
+                  <Icon name={isOnDuty ? 'LogOut' : 'LogIn'} size={16} />
+                  {isOnDuty ? 'Покинуть дежурство' : 'Заступить на дежурство'}
+                </Button>
+              )}
               {currentUser && (
                 <div className="text-right hidden sm:block">
                   <div className="flex items-center justify-end gap-2 mb-1">

@@ -31,9 +31,17 @@ export interface Dispatcher {
   status: 'active' | 'inactive';
 }
 
+export interface DispatcherShift {
+  dispatcherId: string;
+  dispatcherName: string;
+  startTime: string;
+  isActive: boolean;
+}
+
 const CALLS_KEY = 'mdc_calls';
 const USERS_KEY = 'mdc_users';
 const CREWS_KEY = 'mdc_crews';
+const DISPATCHER_SHIFT_KEY = 'mdc_dispatcher_shift';
 
 const defaultCalls: Call[] = [
   { id: 'C-1024', time: '13:48', address: 'ул. Ленина, 45', type: 'ДТП', priority: 'urgent', status: 'dispatched', assignedUnit: 'NU-12', assignedCrewId: 2, dispatcherId: '10002', dispatcherName: 'Иванов И.И.', createdAt: new Date().toISOString() },
@@ -242,6 +250,47 @@ export const getAvailableCrewMembers = (): User[] => {
   const excludedRoles = ['manager', 'dispatcher', 'supervisor'];
   const onlineUsers = getOnlineUsers();
   return onlineUsers.filter(u => !excludedRoles.includes(u.role));
+};
+
+export const startDispatcherShift = (dispatcher: User): void => {
+  const shift: DispatcherShift = {
+    dispatcherId: dispatcher.id,
+    dispatcherName: dispatcher.fullName,
+    startTime: new Date().toISOString(),
+    isActive: true
+  };
+  localStorage.setItem(DISPATCHER_SHIFT_KEY, JSON.stringify(shift));
+};
+
+export const endDispatcherShift = (): void => {
+  localStorage.removeItem(DISPATCHER_SHIFT_KEY);
+};
+
+export const getActiveDispatcherShift = (): DispatcherShift | null => {
+  const stored = localStorage.getItem(DISPATCHER_SHIFT_KEY);
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
+export const isDispatcherOnDuty = (): boolean => {
+  const shift = getActiveDispatcherShift();
+  return shift !== null && shift.isActive;
+};
+
+export const getUserCrew = (userId: string): Crew | null => {
+  const crews = getCrews();
+  return crews.find(c => c.members.includes(userId)) || null;
+};
+
+export const getCrewCalls = (crewId: number): Call[] => {
+  const calls = getCalls();
+  return calls.filter(c => c.assignedCrewId === crewId && c.status !== 'completed');
 };
 
 export const createCall = (call: Omit<Call, 'id' | 'time' | 'createdAt'>): Call => {
