@@ -18,14 +18,17 @@ class SyncManager {
   constructor() {
     // Используем BroadcastChannel для синхронизации между вкладками
     this.channel = new BroadcastChannel('mdc_sync');
+    console.log('[SyncManager] BroadcastChannel создан');
     
     // Слушаем сообщения от других вкладок
     this.channel.onmessage = (event) => {
       const { eventType, data } = event.data;
+      console.log('[SyncManager] Получено сообщение:', { eventType, data });
       
       // Если есть данные, обновляем localStorage
       if (data && data.key && data.value) {
         localStorage.setItem(data.key, JSON.stringify(data.value));
+        console.log('[SyncManager] localStorage обновлен:', data.key);
       }
       
       // Уведомляем локальных слушателей
@@ -48,6 +51,7 @@ class SyncManager {
    * Уведомить все вкладки и компоненты о событии
    */
   notify(eventType: SyncEventType, data?: { key: string; value: any }): void {
+    console.log('[SyncManager] Отправка сообщения:', { eventType, data: data?.key });
     // Отправляем сообщение всем вкладкам через BroadcastChannel
     this.channel.postMessage({ eventType, data });
     

@@ -13,40 +13,44 @@ interface PanicAlertProps {
 }
 
 const PanicAlert = ({ currentUser }: PanicAlertProps) => {
-  const [myCrewPanic, setMyCrewPanic] = useState<Crew | null>(null);
+  const [panicCrews, setPanicCrews] = useState<Crew[]>([]);
   const audioRef = useRef<{ oscillator: OscillatorNode; context: AudioContext; interval: NodeJS.Timeout } | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [showAlert, setShowAlert] = useState(false);
+  const [showingCrews, setShowingCrews] = useState<Set<number>>(new Set());
   const { toast } = useToast();
 
   const loadPanicAlerts = () => {
-    if (!currentUser) return;
+    const alerts = getActivePanicAlerts();
     
-    const myCrew = getUserCrew(currentUser.id);
+    if (alerts.length > panicCrews.length) {
+      playAlarmSound();
+      
+      alerts.forEach(crew => {
+        if (!panicCrews.find(c => c.id === crew.id)) {
+          setShowingCrews(prev => new Set(prev).add(crew.id));
+          
+          setTimeout(() => {
+            setShowingCrews(prev => {
+              const next = new Set(prev);
+              next.delete(crew.id);
+              return next;
+            });
+          }, 10000);
+          
+          toast({
+            title: '🚨 ТРЕВОГА!',
+            description: `Экипаж ${crew.unitName} активировал кнопку паники! Местоположение: ${crew.location || 'неизвестно'}`,
+            variant: 'destructive',
+            duration: 10000,
+          });
+        }
+      });
+    }
     
-    if (myCrew?.panicActive) {
-      if (!myCrewPanic) {
-        playAlarmSound();
-        setShowAlert(true);
-        
-        setTimeout(() => {
-          setShowAlert(false);
-        }, 10000);
-        
-        toast({
-          title: '🚨 ТРЕВОГА!',
-          description: `Ваш экипаж ${myCrew.unitName} активировал кнопку паники!`,
-          variant: 'destructive',
-          duration: 10000,
-        });
-      }
-      setMyCrewPanic(myCrew);
-    } else {
-      if (myCrewPanic && isPlaying) {
-        stopAlarmSound();
-      }
-      setMyCrewPanic(null);
-      setShowAlert(false);
+    setPanicCrews(alerts);
+    
+    if (alerts.length === 0 && isPlaying) {
+      stopAlarmSound();
     }
   };
 
@@ -91,34 +95,36 @@ const PanicAlert = ({ currentUser }: PanicAlertProps) => {
     setIsPlaying(false);
   };
 
-  if (!myCrewPanic || !showAlert) return null;
+  const visibleCrews = panicCrews.filter(crew => showingCrews.has(crew.id));
+  
+  if (visibleCrews.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-50 max-w-md">
-      <Card 
-        className="border-red-600 border-2 bg-red-50 animate-pulse"
-      >
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <Icon name="AlertTriangle" size={32} className="text-red-600 flex-shrink-0" />
-            <div className="flex-1">
-              <h3 className="font-bold text-red-900 text-lg">🚨 ТРЕВОГА АКТИВНА!</h3>
-              <p className="text-sm text-red-800 font-semibold mt-1">
-                Экипаж: {myCrewPanic.unitName}
-              </p>
-              <p className="text-sm text-red-700 mt-1">
-                📍 Местоположение: {myCrewPanic.location || 'неизвестно'}
-              </p>
-              <p className="text-xs text-red-600 mt-1">
-                Активировано: {myCrewPanic.panicTriggeredAt ? new Date(myCrewPanic.panicTriggeredAt).toLocaleTimeString('ru-RU') : ''}
-              </p>
-              <p className="text-xs text-red-500 mt-2">
-                Диспетчер уведомлен. Ожидайте помощи.
-              </p>
+    <div className="fixed top-4 right-4 z-50 space-y-2 max-w-md">
+      {visibleCrews.map(crew => (
+        <Card 
+          key={crew.id}
+          className="border-red-600 border-2 bg-red-50 animate-pulse"
+        >
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <Icon name="AlertTriangle" size={32} className="text-red-600 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="font-bold text-red-900 text-lg">🚨 ТРЕВОГА!</h3>
+                <p className="text-sm text-red-800 font-semibold mt-1">
+                  Экипаж: {crew.unitName}
+                </p>
+                <p className="text-sm text-red-700 mt-1">
+                  📍 Местоположение: {crew.location || 'неизвестно'}
+                </p>
+                <p className="text-xs text-red-600 mt-1">
+                  Активировано: {crew.panicTriggeredAt ? new Date(crew.panicTriggeredAt).toLocaleTimeString('ru-RU') : ''}
+                </p>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 };
