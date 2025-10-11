@@ -52,7 +52,9 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
   const loadData = () => {
     if (!currentUser) return;
     
+    console.log('[EmployeeDashboard] loadData вызван для userId:', currentUser.id);
     const crew = getUserCrew(currentUser.id);
+    console.log('[EmployeeDashboard] getUserCrew вернул:', crew);
     setMyCrew(crew);
     
     if (crew) {
