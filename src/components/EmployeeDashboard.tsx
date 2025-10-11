@@ -9,6 +9,7 @@ import ProfileDialog from './ProfileDialog';
 import { type User } from '@/lib/auth';
 import { getUserCrew, getCrewCalls, updateCrewStatus, isDispatcherOnDuty, getActiveDispatcherShifts, getAvailableCrewMembers, createCrew, deleteCrew, type Crew, type Call } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
+import { useSync } from '@/hooks/use-sync';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
@@ -48,52 +49,6 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
   const [crewFormData, setCrewFormData] = useState({ unitName: '', members: [] as string[] });
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 2000);
-    
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'mdc_dispatcher_shifts' || e.key === 'mdc_dispatcher_shifts_timestamp') {
-        console.log('Storage change detected:', e.key);
-        loadData();
-      }
-    };
-    
-    const handleShiftChange = () => {
-      loadData();
-    };
-    
-    // BroadcastChannel для синхронизации между вкладками
-    const broadcastChannel = typeof BroadcastChannel !== 'undefined' 
-      ? new BroadcastChannel('mdc_sync') 
-      : null;
-    
-    const handleBroadcast = (event: MessageEvent) => {
-      console.log('Broadcast message received:', event.data);
-      if (event.data.type === 'dispatcher_shift_changed' || event.data.type === 'online_users_changed') {
-        loadData();
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('dispatcher_shift_changed', handleShiftChange);
-    broadcastChannel?.addEventListener('message', handleBroadcast);
-    
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('dispatcher_shift_changed', handleShiftChange);
-      broadcastChannel?.removeEventListener('message', handleBroadcast);
-      broadcastChannel?.close();
-    };
-  }, [currentUser]);
-
-  useEffect(() => {
-    loadAvailableUsers();
-    const interval = setInterval(loadAvailableUsers, 2000);
-    return () => clearInterval(interval);
-  }, []);
-
   const loadData = () => {
     if (!currentUser) return;
     
@@ -119,10 +74,11 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
     setAvailableUsers(getAvailableCrewMembers());
   };
 
+  useSync(['dispatcher_shift_changed', 'crews_updated', 'calls_updated'], loadData, 2000);
+  useSync(['online_users_changed'], loadAvailableUsers, 2000);
+
   const handleCreateCrew = () => {
-    const currentDispatcherStatus = isDispatcherOnDuty();
-    console.log('Create crew - dispatcher on duty:', currentDispatcherStatus);
-    if (currentDispatcherStatus) {
+    if (isDispatcherOnDuty()) {
       toast({ title: 'Недоступно', description: 'Диспетчер на дежурстве. Обратитесь к диспетчеру.', variant: 'destructive' });
       setCreateDialog(false);
       return;
@@ -134,18 +90,14 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
     if (!crewFormData.members.includes(currentUser!.id)) {
       crewFormData.members.push(currentUser!.id);
     }
-    console.log('Creating crew:', crewFormData.unitName, 'members:', crewFormData.members);
     createCrew(crewFormData.unitName, crewFormData.members, currentUser!.id);
-    loadData();
     setCreateDialog(false);
     setCrewFormData({ unitName: '', members: [] });
     toast({ title: 'Экипаж создан', description: `Экипаж ${crewFormData.unitName} успешно создан` });
   };
 
   const handleOpenCreateDialog = () => {
-    const currentDispatcherStatus = isDispatcherOnDuty();
-    console.log('Open dialog - dispatcher on duty:', currentDispatcherStatus);
-    if (currentDispatcherStatus) {
+    if (isDispatcherOnDuty()) {
       toast({ title: 'Недоступно', description: 'Диспетчер на дежурстве. Обратитесь к диспетчеру.', variant: 'destructive' });
       return;
     }

@@ -15,6 +15,7 @@ import { type User } from '@/lib/auth';
 import { canManageAccounts } from '@/lib/permissions';
 import { startDispatcherShift, endDispatcherShift, isUserOnDuty, getActiveDispatcherShifts } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
+import { useSync } from '@/hooks/use-sync';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -28,28 +29,14 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
   const [activeDispatchers, setActiveDispatchers] = useState(0);
   const { toast } = useToast();
 
-  useEffect(() => {
+  const updateStatus = () => {
     if (currentUser) {
       setIsOnDuty(isUserOnDuty(currentUser.id));
       setActiveDispatchers(getActiveDispatcherShifts().length);
     }
-    
-    const handleShiftChange = () => {
-      console.log('Dashboard: dispatcher_shift_changed event received');
-      if (currentUser) {
-        setIsOnDuty(isUserOnDuty(currentUser.id));
-        setActiveDispatchers(getActiveDispatcherShifts().length);
-      }
-    };
-    
-    window.addEventListener('dispatcher_shift_changed', handleShiftChange);
-    window.addEventListener('storage', handleShiftChange);
-    
-    return () => {
-      window.removeEventListener('dispatcher_shift_changed', handleShiftChange);
-      window.removeEventListener('storage', handleShiftChange);
-    };
-  }, [currentUser]);
+  };
+
+  useSync(['dispatcher_shift_changed'], updateStatus);
 
   const handleToggleDuty = () => {
     if (!currentUser) return;

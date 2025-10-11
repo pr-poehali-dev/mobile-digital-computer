@@ -52,6 +52,7 @@ import {
   type Call,
 } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
+import { useSync } from "@/hooks/use-sync";
 
 const getStatusConfig = (status: Crew["status"]) => {
   switch (status) {
@@ -122,62 +123,13 @@ const CrewsTab = () => {
   });
   const { toast } = useToast();
 
-  useEffect(() => {
+  const loadAll = () => {
     loadCrews();
     loadCalls();
     loadAvailableUsers();
+  };
 
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'mdc_online_users' || e.key === 'mdc_crews' || e.key === 'mdc_online_users_timestamp') {
-        console.log('Storage change detected:', e.key);
-        loadCrews();
-        loadAvailableUsers();
-      }
-    };
-
-    const handleCrewsUpdate = () => {
-      loadCrews();
-    };
-
-    const handleOnlineUsersUpdate = () => {
-      console.log('Online users changed event received');
-      loadAvailableUsers();
-    };
-
-    // BroadcastChannel для синхронизации между вкладками
-    const broadcastChannel = typeof BroadcastChannel !== 'undefined' 
-      ? new BroadcastChannel('mdc_sync') 
-      : null;
-    
-    const handleBroadcast = (event: MessageEvent) => {
-      console.log('Broadcast message received:', event.data);
-      if (event.data.type === 'online_users_changed') {
-        loadAvailableUsers();
-      }
-      if (event.data.type === 'crews_updated') {
-        loadCrews();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('crews_updated', handleCrewsUpdate);
-    window.addEventListener('online_users_changed', handleOnlineUsersUpdate);
-    broadcastChannel?.addEventListener('message', handleBroadcast);
-    
-    const interval = setInterval(() => {
-      loadCrews();
-      loadAvailableUsers();
-    }, 2000);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('crews_updated', handleCrewsUpdate);
-      window.removeEventListener('online_users_changed', handleOnlineUsersUpdate);
-      broadcastChannel?.removeEventListener('message', handleBroadcast);
-      broadcastChannel?.close();
-      clearInterval(interval);
-    };
-  }, []);
+  useSync(['crews_updated', 'online_users_changed', 'calls_updated'], loadAll, 2000);
 
   const loadCrews = () => {
     const crews = getCrews();
