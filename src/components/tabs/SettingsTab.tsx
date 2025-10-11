@@ -119,6 +119,14 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
   };
 
   const handleMdtSystemToggle = (checked: boolean) => {
+    if (checked && survSystemEnabled) {
+      toast({
+        title: 'Невозможно включить МДТ',
+        description: 'Сначала отключите СУРВ систему',
+        variant: 'destructive'
+      });
+      return;
+    }
     updateSystemRestrictions({ mdtSystemDisabled: checked });
     toast({
       title: checked ? 'МДТ система полностью отключена' : 'МДТ система включена',
@@ -152,6 +160,14 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
   };
 
   const handleSurvSystemToggle = (checked: boolean) => {
+    if (checked && mdtSystemDisabled) {
+      toast({
+        title: 'Невозможно включить СУРВ',
+        description: 'Сначала включите МДТ систему',
+        variant: 'destructive'
+      });
+      return;
+    }
     updateSystemRestrictions({ survSystemEnabled: checked });
     toast({
       title: checked ? 'СУРВ система включена' : 'СУРВ система отключена',
@@ -335,6 +351,8 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
                   <p className="text-sm text-muted-foreground">
                     {mdtSystemDisabled 
                       ? '🔴 Система полностью отключена. Все разделы (экипажи, вызовы, аналитика, вступление на дежурство) скрыты. Диспетчеры заморожены.'
+                      : survSystemEnabled
+                      ? '⚠️ Система доступна, но несовместима с СУРВ (отключите СУРВ для включения МДТ)'
                       : '✅ Система работает. Все функции МДТ доступны.'
                     }
                   </p>
@@ -343,6 +361,7 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
                   checked={mdtSystemDisabled} 
                   onCheckedChange={handleMdtSystemToggle}
                   className="data-[state=checked]:bg-destructive"
+                  disabled={survSystemEnabled}
                 />
               </div>
 
@@ -432,6 +451,8 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
                   <p className="text-sm text-muted-foreground">
                     {survSystemEnabled 
                       ? 'Сотрудники могут отмечать начало смены, перерывы и окончание смены'
+                      : mdtSystemDisabled
+                      ? '⚠️ Учёт рабочего времени недоступен (включите МДТ систему)'
                       : 'Учёт рабочего времени отключен'
                     }
                   </p>
@@ -440,6 +461,7 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
                   checked={survSystemEnabled} 
                   onCheckedChange={handleSurvSystemToggle}
                   className="data-[state=checked]:bg-success"
+                  disabled={mdtSystemDisabled}
                 />
               </div>
 
