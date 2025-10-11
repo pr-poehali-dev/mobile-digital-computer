@@ -229,7 +229,7 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
           </TabsContent>
 
           <TabsContent value="log" className="space-y-4">
-            <LogTab />
+            <LogTab currentUser={currentUser} />
           </TabsContent>
 
           {canManageAccounts(currentUser) && (

@@ -240,6 +240,15 @@ export const deleteCall = (callId: string): void => {
   saveCalls(calls.filter(c => c.id !== callId));
 };
 
+export const deleteCalls = (callIds: string[]): void => {
+  const calls = getCalls();
+  saveCalls(calls.filter(c => !callIds.includes(c.id)));
+};
+
+export const clearAllCalls = (): void => {
+  saveCalls([]);
+};
+
 export const assignCrewToCall = (callId: string, crewId: number, dispatcherId?: string): void => {
   const calls = getCalls();
   const crews = getCrews();
@@ -551,6 +560,23 @@ export const getUserActivityLogs = (userId: string): ActivityLog[] => {
     log.userId === userId || 
     (log.crewId && userCrewIds.includes(log.crewId))
   );
+};
+
+export const deleteActivityLog = (logId: string): void => {
+  const logs = getActivityLogs();
+  storage.set(KEYS.ACTIVITY_LOG, logs.filter(log => log.id !== logId));
+  syncManager.notify('logs_updated');
+};
+
+export const deleteActivityLogs = (logIds: string[]): void => {
+  const logs = getActivityLogs();
+  storage.set(KEYS.ACTIVITY_LOG, logs.filter(log => !logIds.includes(log.id)));
+  syncManager.notify('logs_updated');
+};
+
+export const clearAllActivityLogs = (): void => {
+  storage.set(KEYS.ACTIVITY_LOG, []);
+  syncManager.notify('logs_updated');
 };
 
 // ============================================================================

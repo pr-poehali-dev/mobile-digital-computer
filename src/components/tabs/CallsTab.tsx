@@ -10,10 +10,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getCalls, deleteCall, updateCallDispatcher, updateCallStatus, createCall, assignCrewToCall, getCrews, getAllUsers, type Call, type Crew } from '@/lib/store';
+import { getCalls, deleteCall, deleteCalls, clearAllCalls, updateCallDispatcher, updateCallStatus, createCall, assignCrewToCall, getCrews, getAllUsers, type Call, type Crew } from '@/lib/store';
 import { canDeleteCalls, canEditDispatchers } from '@/lib/permissions';
 import { type User } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useSync } from '@/hooks/use-sync';
 
 interface CallsTabProps {
   currentUser: User | null;
@@ -47,7 +49,8 @@ const CallsTab = ({ currentUser }: CallsTabProps) => {
   const [calls, setCalls] = useState<Call[]>([]);
   const [crews, setCrews] = useState<Crew[]>([]);
   const [dispatchers, setDispatchers] = useState<User[]>([]);
-  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; callId: string | null }>({ open: false, callId: null });
+  const [selectedCalls, setSelectedCalls] = useState<Set<string>>(new Set());
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; type: 'one' | 'selected' | 'all'; callId?: string }>({ open: false, type: 'one' });
   const [createDialog, setCreateDialog] = useState(false);
   const [assignDialog, setAssignDialog] = useState<{ open: boolean; callId: string | null }>({ open: false, callId: null });
   const [formData, setFormData] = useState({
@@ -58,9 +61,7 @@ const CallsTab = ({ currentUser }: CallsTabProps) => {
   });
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useSync(['calls_updated', 'crews_updated'], loadData, 2000);
 
   const loadData = () => {
     setCalls(getCalls());
@@ -68,14 +69,38 @@ const CallsTab = ({ currentUser }: CallsTabProps) => {
     setDispatchers(getAllUsers().filter(u => u.role === 'dispatcher'));
   };
 
-  const handleDelete = (callId: string) => {
-    deleteCall(callId);
-    loadData();
-    setDeleteDialog({ open: false, callId: null });
-    toast({
-      title: 'Вызов удален',
-      description: `Вызов ${callId} успешно удален из системы`,
-    });
+  const handleDelete = () => {
+    if (deleteDialog.type === 'one' && deleteDialog.callId) {
+      deleteCall(deleteDialog.callId);
+      toast({ title: 'Вызов удален', description: 'Вызов успешно удален из системы' });
+    } else if (deleteDialog.type === 'selected') {
+      deleteCalls(Array.from(selectedCalls));
+      setSelectedCalls(new Set());
+      toast({ title: 'Вызовы удалены', description: `Удалено вызовов: ${selectedCalls.size}` });
+    } else if (deleteDialog.type === 'all') {
+      clearAllCalls();
+      setSelectedCalls(new Set());
+      toast({ title: 'Все вызовы удалены', description: 'История вызовов полностью очищена' });
+    }
+    setDeleteDialog({ open: false, type: 'one' });
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedCalls(new Set(calls.map(call => call.id)));
+    } else {
+      setSelectedCalls(new Set());
+    }
+  };
+
+  const handleSelectCall = (callId: string, checked: boolean) => {
+    const newSelected = new Set(selectedCalls);
+    if (checked) {
+      newSelected.add(callId);
+    } else {
+      newSelected.delete(callId);
+    }
+    setSelectedCalls(newSelected);
   };
 
   const handleDispatcherChange = (callId: string, dispatcherId: string) => {
@@ -171,12 +196,34 @@ const CallsTab = ({ currentUser }: CallsTabProps) => {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <CardTitle>История вызовов</CardTitle>
-            <Button size="sm" onClick={() => setCreateDialog(true)}>
-              <Icon name="Plus" size={16} className="mr-2" />
-              Новый вызов
-            </Button>
+            <div className="flex items-center gap-2">
+              {canDeleteCalls(currentUser) && selectedCalls.size > 0 && (
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => setDeleteDialog({ open: true, type: 'selected' })}
+                >
+                  <Icon name="Trash2" size={16} className="mr-2" />
+                  Удалить ({selectedCalls.size})
+                </Button>
+              )}
+              {canDeleteCalls(currentUser) && calls.length > 0 && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setDeleteDialog({ open: true, type: 'all' })}
+                >
+                  <Icon name="Trash2" size={16} className="mr-2" />
+                  Очистить всё
+                </Button>
+              )}
+              <Button size="sm" onClick={() => setCreateDialog(true)}>
+                <Icon name="Plus" size={16} className="mr-2" />
+                Новый вызов
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -184,6 +231,19 @@ const CallsTab = ({ currentUser }: CallsTabProps) => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  {canDeleteCalls(currentUser) && (
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={calls.length > 0 && selectedCalls.size === calls.length}
+                        onCheckedChange={handleSelectAll}
+                        ref={(el) => {
+                          if (el) {
+                            (el as any).indeterminate = selectedCalls.size > 0 && selectedCalls.size < calls.length;
+                          }
+                        }}
+                      />
+                    </TableHead>
+                  )}
                   <TableHead>ID</TableHead>
                   <TableHead>Время</TableHead>
                   <TableHead>Адрес</TableHead>
@@ -201,6 +261,14 @@ const CallsTab = ({ currentUser }: CallsTabProps) => {
                   const statusConfig = getStatusConfig(call.status);
                   return (
                     <TableRow key={call.id}>
+                      {canDeleteCalls(currentUser) && (
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedCalls.has(call.id)}
+                            onCheckedChange={(checked) => handleSelectCall(call.id, checked as boolean)}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell className="font-medium">{call.id}</TableCell>
                       <TableCell>{call.time}</TableCell>
                       <TableCell className="max-w-[200px] truncate">{call.address}</TableCell>
@@ -261,7 +329,7 @@ const CallsTab = ({ currentUser }: CallsTabProps) => {
                             <Button 
                               variant="ghost" 
                               size="icon"
-                              onClick={() => setDeleteDialog({ open: true, callId: call.id })}
+                              onClick={() => setDeleteDialog({ open: true, type: 'one', callId: call.id })}
                             >
                               <Icon name="Trash2" size={16} className="text-destructive" />
                             </Button>
@@ -371,19 +439,25 @@ const CallsTab = ({ currentUser }: CallsTabProps) => {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, callId: null })}>
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Удалить вызов?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {deleteDialog.type === 'all' && 'Удалить все вызовы?'}
+              {deleteDialog.type === 'selected' && `Удалить выбранные вызовы (${selectedCalls.size})?`}
+              {deleteDialog.type === 'one' && 'Удалить вызов?'}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Вы уверены, что хотите удалить вызов {deleteDialog.callId}? Это действие нельзя отменить.
+              {deleteDialog.type === 'all' && 'Вся история вызовов будет безвозвратно удалена. Это действие нельзя отменить.'}
+              {deleteDialog.type === 'selected' && 'Выбранные вызовы будут безвозвратно удалены. Это действие нельзя отменить.'}
+              {deleteDialog.type === 'one' && `Вы уверены, что хотите удалить вызов ${deleteDialog.callId}? Это действие нельзя отменить.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Отмена</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={() => deleteDialog.callId && handleDelete(deleteDialog.callId)}
-              className="bg-destructive hover:bg-destructive/90"
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Удалить
             </AlertDialogAction>

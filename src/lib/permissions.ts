@@ -4,6 +4,10 @@ export const canDeleteCalls = (user: User | null): boolean => {
   return user?.role === 'manager';
 };
 
+export const canDeleteLogs = (user: User | null): boolean => {
+  return user?.role === 'manager';
+};
+
 export const canEditDispatchers = (user: User | null): boolean => {
   return user?.role === 'manager';
 };
