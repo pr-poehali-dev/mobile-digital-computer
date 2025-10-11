@@ -229,7 +229,9 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
             <TableBody>
               {users.map((user) => (
                 <TableRow key={user.id}>
-                  <TableCell className="font-mono">{user.id}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="font-mono">#{user.id}</Badge>
+                  </TableCell>
                   <TableCell className="font-medium">{user.fullName}</TableCell>
                   <TableCell>
                     <Badge variant={getRoleBadgeVariant(user.role) as any}>

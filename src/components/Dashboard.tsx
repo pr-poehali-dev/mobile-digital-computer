@@ -10,6 +10,7 @@ import AnalyticsTab from './tabs/AnalyticsTab';
 import LogTab from './tabs/LogTab';
 import SettingsTab from './tabs/SettingsTab';
 import AccountsTab from './tabs/AccountsTab';
+import ProfileDialog from './ProfileDialog';
 import { type User } from '@/lib/auth';
 import { canManageAccounts } from '@/lib/permissions';
 
@@ -20,6 +21,7 @@ interface DashboardProps {
 
 const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
   const [activeTab, setActiveTab] = useState('crews');
+  const [profileOpen, setProfileOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
@@ -38,16 +40,18 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
             <div className="flex items-center space-x-4">
               {currentUser && (
                 <div className="text-right hidden sm:block">
-                  <p className="text-sm font-medium text-sidebar-foreground">{currentUser.fullName}</p>
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="flex items-center justify-end gap-2 mb-1">
                     <Badge variant="outline" className="text-xs">
                       {currentUser.role === 'manager' && 'Менеджер'}
-                      {currentUser.role === 'dispatcher' && 'Диспетчер'}
                       {currentUser.role === 'supervisor' && 'Руководитель'}
+                      {currentUser.role === 'dispatcher' && 'Диспетчер'}
                       {currentUser.role === 'employee' && 'Сотрудник'}
                     </Badge>
-                    <span className="text-xs text-sidebar-foreground/70">ID: {currentUser.id}</span>
+                    <Badge variant="secondary" className="text-xs font-mono">
+                      #{currentUser.id}
+                    </Badge>
                   </div>
+                  <p className="text-sm font-medium text-sidebar-foreground">{currentUser.fullName}</p>
                 </div>
               )}
               <DropdownMenu>
@@ -68,11 +72,11 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
                       <DropdownMenuSeparator />
                     </>
                   )}
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setProfileOpen(true)}>
                     <Icon name="User" size={16} className="mr-2" />
                     Профиль
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setActiveTab('settings')}>
                     <Icon name="Settings" size={16} className="mr-2" />
                     Настройки
                   </DropdownMenuItem>
@@ -146,6 +150,12 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
           </TabsContent>
         </Tabs>
       </main>
+
+      <ProfileDialog 
+        open={profileOpen} 
+        onOpenChange={setProfileOpen} 
+        user={currentUser} 
+      />
     </div>
   );
 };
