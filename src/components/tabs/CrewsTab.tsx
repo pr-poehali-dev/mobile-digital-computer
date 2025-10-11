@@ -23,6 +23,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useSync } from "@/hooks/use-sync";
 import { type User } from '@/lib/auth';
+import { sanitizeName, sanitizeAddress } from '@/lib/sanitize';
 import CrewCard from "./crews/CrewCard";
 import CrewDialogs from "./crews/CrewDialogs";
 

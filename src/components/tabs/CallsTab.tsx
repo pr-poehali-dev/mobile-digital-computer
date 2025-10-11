@@ -16,6 +16,7 @@ import { type User } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useSync } from '@/hooks/use-sync';
+import { sanitizeAddress, sanitizeText } from '@/lib/sanitize';
 
 interface CallsTabProps {
   currentUser: User | null;
@@ -357,8 +358,9 @@ const CallsTab = ({ currentUser }: CallsTabProps) => {
               <Input
                 id="address"
                 value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, address: sanitizeAddress(e.target.value) })}
                 placeholder="ул. Ленина, 45"
+                maxLength={200}
               />
             </div>
             <div className="space-y-2">
@@ -366,8 +368,9 @@ const CallsTab = ({ currentUser }: CallsTabProps) => {
               <Input
                 id="type"
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, type: sanitizeText(e.target.value) })}
                 placeholder="ДТП, Пожар, Медицинская помощь..."
+                maxLength={100}
               />
             </div>
             <div className="space-y-2">

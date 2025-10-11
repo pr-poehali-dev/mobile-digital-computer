@@ -1,5 +1,6 @@
 import { type User } from './auth';
 import { syncManager } from './sync-manager';
+import { sanitizeText, sanitizeName, sanitizeAddress, sanitizeEmail, sanitizeId } from './sanitize';
 
 // ============================================================================
 // TYPES
@@ -197,6 +198,8 @@ export const createCall = (call: Omit<Call, 'id' | 'time' | 'createdAt'>, creato
     ...call,
     id: `C-${newId}`,
     time: now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+    address: sanitizeAddress(call.address),
+    type: sanitizeText(call.type),
     createdAt: now.toISOString(),
     dispatcherId,
     dispatcherName
@@ -336,11 +339,16 @@ export const saveAllUsers = (users: User[]): void => {
 
 export const createUser = (userId: string, password: string, user: Omit<User, 'id'>): User => {
   const users = getAllUsers();
-  const newUser = { ...user, id: userId };
+  const newUser = { 
+    ...user, 
+    id: sanitizeId(userId),
+    fullName: sanitizeName(user.fullName),
+    email: sanitizeEmail(user.email)
+  };
   saveAllUsers([...users, newUser]);
   
   const usersWithPassword = storage.get<any[]>(KEYS.USERS_PASSWORDS, []);
-  usersWithPassword.push({ id: userId, password });
+  usersWithPassword.push({ id: sanitizeId(userId), password });
   storage.set(KEYS.USERS_PASSWORDS, usersWithPassword);
   
   return newUser;
@@ -348,7 +356,12 @@ export const createUser = (userId: string, password: string, user: Omit<User, 'i
 
 export const updateUser = (userId: string, updates: Partial<User>): void => {
   const users = getAllUsers();
-  saveAllUsers(users.map(u => u.id === userId ? { ...u, ...updates } : u));
+  const sanitizedUpdates: Partial<User> = {
+    ...updates,
+    ...(updates.fullName && { fullName: sanitizeName(updates.fullName) }),
+    ...(updates.email && { email: sanitizeEmail(updates.email) })
+  };
+  saveAllUsers(users.map(u => u.id === userId ? { ...u, ...sanitizedUpdates } : u));
 };
 
 export const deleteUser = (userId: string): void => {
@@ -412,10 +425,10 @@ export const createCrew = async (unitName: string, members: string[], creatorId?
   
   const newCrew: Crew = {
     id: newId,
-    unitName,
+    unitName: sanitizeName(unitName),
     status: 'available',
     location: 'Станция',
-    members,
+    members: members.map(m => sanitizeId(m)),
     lastUpdate: new Date().toISOString()
   };
   
@@ -449,7 +462,12 @@ export const updateCrew = async (crewId: number, unitName: string, members: stri
   const crews = getCrews();
   const updatedCrews = crews.map(crew => 
     crew.id === crewId 
-      ? { ...crew, unitName, members, lastUpdate: new Date().toISOString() }
+      ? { 
+          ...crew, 
+          unitName: sanitizeName(unitName), 
+          members: members.map(m => sanitizeId(m)), 
+          lastUpdate: new Date().toISOString() 
+        }
       : crew
   );
   
@@ -462,9 +480,10 @@ export const updateCrewStatus = async (crewId: number, status: Crew['status'], l
   const crew = crews.find(c => c.id === crewId);
   
   if (crew) {
+    const sanitizedLocation = location ? sanitizeAddress(location) : crew.location;
     const updatedCrews = crews.map(c => 
       c.id === crewId
-        ? { ...c, status, location: location || c.location, lastUpdate: new Date().toISOString() }
+        ? { ...c, status, location: sanitizedLocation, lastUpdate: new Date().toISOString() }
         : c
     );
     
@@ -868,7 +887,11 @@ export const addActivityLog = (log: Omit<ActivityLog, 'id' | 'timestamp'>): void
   const newLog: ActivityLog = {
     ...log,
     id: `LOG-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    userName: sanitizeName(log.userName),
+    description: sanitizeText(log.description),
+    details: log.details ? sanitizeText(log.details) : undefined,
+    crewName: log.crewName ? sanitizeName(log.crewName) : undefined
   };
   logs.unshift(newLog);
   storage.set(KEYS.ACTIVITY_LOG, logs);

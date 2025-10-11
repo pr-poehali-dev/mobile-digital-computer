@@ -12,6 +12,7 @@ import Icon from '@/components/ui/icon';
 import { getAllUsers, deleteUser, updateUser, createUser, changeUserId } from '@/lib/store';
 import { type User } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
+import { sanitizeName, sanitizeEmail, sanitizeId } from '@/lib/sanitize';
 
 interface AccountsTabProps {
   currentUser: User | null;
@@ -305,10 +306,9 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
               <Input
                 id="userId"
                 value={formData.userId}
-                onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, userId: sanitizeId(e.target.value) })}
                 placeholder="Например: 10005"
-                maxLength={5}
-                pattern="[0-9]{5}"
+                maxLength={10}
               />
               <p className="text-xs text-muted-foreground">Ровно 5 цифр. Используется для входа в систему</p>
             </div>
@@ -327,8 +327,9 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
               <Input
                 id="fullName"
                 value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, fullName: sanitizeName(e.target.value) })}
                 placeholder="Иван Иванов"
+                maxLength={100}
               />
             </div>
             <div className="space-y-2">
@@ -355,8 +356,9 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
                 id="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value.trim().toLowerCase() })}
                 placeholder="user@example.com"
+                maxLength={100}
               />
             </div>
           </div>
@@ -385,10 +387,9 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
               <Input
                 id="edit-userId"
                 value={formData.userId}
-                onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, userId: sanitizeId(e.target.value) })}
                 placeholder="Например: 10005"
-                maxLength={5}
-                pattern="[0-9]{5}"
+                maxLength={10}
                 disabled={editDialog.user?.id === currentUser?.id}
               />
               <p className="text-xs text-muted-foreground">Ровно 5 цифр. {editDialog.user?.id === currentUser?.id ? 'Нельзя изменить свой ID' : 'Используется для входа в систему'}</p>
@@ -398,8 +399,9 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
               <Input
                 id="edit-fullName"
                 value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, fullName: sanitizeName(e.target.value) })}
                 placeholder="Иван Иванов"
+                maxLength={100}
               />
             </div>
             <div className="space-y-2">
@@ -426,7 +428,8 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
                 id="edit-email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value.trim().toLowerCase() })}
+                maxLength={100}
               />
             </div>
           </div>
