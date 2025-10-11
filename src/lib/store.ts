@@ -21,6 +21,7 @@ export interface Crew {
   status: 'available' | 'en-route' | 'on-scene' | 'unavailable';
   location?: string;
   lastUpdate: string;
+  members: string[];
 }
 
 export interface Dispatcher {
@@ -42,14 +43,7 @@ const defaultCalls: Call[] = [
   { id: 'C-1020', time: '13:00', address: 'ул. Гагарина, 156', type: 'Медицинская помощь', priority: 'high', status: 'completed', assignedUnit: 'NU-07', assignedCrewId: 4, dispatcherId: '10002', dispatcherName: 'Иванов И.И.', createdAt: new Date().toISOString(), completedAt: new Date().toISOString() },
 ];
 
-const defaultCrews: Crew[] = [
-  { id: 1, unitName: 'NU-10', status: 'available', location: 'Станция №3', lastUpdate: new Date().toISOString() },
-  { id: 2, unitName: 'NU-12', status: 'en-route', location: 'ул. Ленина, 45', lastUpdate: new Date().toISOString() },
-  { id: 3, unitName: 'NU-15', status: 'on-scene', location: 'пр. Мира, 120', lastUpdate: new Date().toISOString() },
-  { id: 4, unitName: 'NU-07', status: 'available', location: 'Станция №1', lastUpdate: new Date().toISOString() },
-  { id: 5, unitName: 'NU-22', status: 'unavailable', location: 'Техобслуживание', lastUpdate: new Date().toISOString() },
-  { id: 6, unitName: 'NU-18', status: 'en-route', location: 'ул. Гагарина, 78', lastUpdate: new Date().toISOString() },
-];
+const defaultCrews: Crew[] = [];
 
 const defaultUsers: User[] = [
   {
@@ -164,7 +158,8 @@ export const getCrews = (): Crew[] => {
   const stored = localStorage.getItem(CREWS_KEY);
   if (stored) {
     try {
-      return JSON.parse(stored);
+      const crews = JSON.parse(stored);
+      return crews.filter((c: Crew) => c.members && c.members.length > 0);
     } catch {
       return defaultCrews;
     }
@@ -183,6 +178,64 @@ export const updateCrewStatus = (crewId: number, status: Crew['status'], locatio
     c.id === crewId ? { ...c, status, location: location || c.location, lastUpdate: new Date().toISOString() } : c
   );
   saveCrews(updated);
+};
+
+export const createCrew = (unitName: string, members: string[]): Crew => {
+  const crews = getCrews();
+  const newId = crews.length > 0 ? Math.max(...crews.map(c => c.id)) + 1 : 1;
+  const newCrew: Crew = {
+    id: newId,
+    unitName,
+    status: 'available',
+    location: 'Станжа',
+    lastUpdate: new Date().toISOString(),
+    members
+  };
+  saveCrews([...crews, newCrew]);
+  return newCrew;
+};
+
+export const updateCrew = (crewId: number, unitName: string, members: string[]): void => {
+  const crews = getCrews();
+  const updated = crews.map(c => 
+    c.id === crewId ? { ...c, unitName, members, lastUpdate: new Date().toISOString() } : c
+  );
+  saveCrews(updated);
+};
+
+export const deleteCrew = (crewId: number): void => {
+  const crews = getCrews();
+  const filtered = crews.filter(c => c.id !== crewId);
+  saveCrews(filtered);
+};
+
+export const getOnlineUsers = (): User[] => {
+  const onlineKey = 'mdc_online_users';
+  const stored = localStorage.getItem(onlineKey);
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+export const addOnlineUser = (user: User): void => {
+  const onlineKey = 'mdc_online_users';
+  const online = getOnlineUsers();
+  const exists = online.find(u => u.id === user.id);
+  if (!exists) {
+    localStorage.setItem(onlineKey, JSON.stringify([...online, user]));
+  }
+};
+
+export const removeOnlineUser = (userId: string): void => {
+  const onlineKey = 'mdc_online_users';
+  const online = getOnlineUsers();
+  const filtered = online.filter(u => u.id !== userId);
+  localStorage.setItem(onlineKey, JSON.stringify(filtered));
 };
 
 export const createCall = (call: Omit<Call, 'id' | 'time' | 'createdAt'>): Call => {

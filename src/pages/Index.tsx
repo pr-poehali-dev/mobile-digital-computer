@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import LoginPage from '@/components/LoginPage';
 import Dashboard from '@/components/Dashboard';
 import { getUserSession, clearUserSession, type User } from '@/lib/auth';
+import { addOnlineUser, removeOnlineUser } from '@/lib/store';
 
 const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -18,16 +19,33 @@ const Index = () => {
       }
       setCurrentUser(user);
       setIsAuthenticated(true);
+      addOnlineUser(user);
     }
     setIsLoading(false);
   }, []);
 
+  useEffect(() => {
+    if (currentUser) {
+      const handleBeforeUnload = () => {
+        removeOnlineUser(currentUser.id);
+      };
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+      };
+    }
+  }, [currentUser]);
+
   const handleLogin = (user: User) => {
     setCurrentUser(user);
     setIsAuthenticated(true);
+    addOnlineUser(user);
   };
 
   const handleLogout = () => {
+    if (currentUser) {
+      removeOnlineUser(currentUser.id);
+    }
     clearUserSession();
     setCurrentUser(null);
     setIsAuthenticated(false);
