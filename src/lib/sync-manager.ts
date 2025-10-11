@@ -26,13 +26,15 @@ class SyncManager {
 
     // Резервный механизм через storage events
     window.addEventListener('storage', (event) => {
-      if (event.key && event.key.startsWith('mdc_')) {
-        console.log('[SyncManager] Обнаружено изменение в localStorage:', event.key);
-        // Уведомляем все подписчики о всех типах событий
+      if (event.key && event.key.startsWith('mdc_sync_')) {
+        const eventType = event.key.replace('mdc_sync_', '') as SyncEventType;
+        console.log('[SyncManager] Обнаружено изменение через storage:', eventType);
+        this.triggerLocalListeners(eventType);
+      } else if (event.key && event.key.startsWith('mdc_crews')) {
+        console.log('[SyncManager] Прямое изменение mdc_crews');
         this.triggerLocalListeners('crews_updated');
+      } else if (event.key && event.key.startsWith('mdc_calls')) {
         this.triggerLocalListeners('calls_updated');
-        this.triggerLocalListeners('dispatcher_shift_changed');
-        this.triggerLocalListeners('online_users_changed');
       }
     });
   }
@@ -43,6 +45,11 @@ class SyncManager {
   notify(eventType: SyncEventType): void {
     console.log('[SyncManager] notify вызван:', eventType);
     this.channel.postMessage({ type: eventType, timestamp: Date.now() });
+    
+    // Дополнительно записываем в localStorage для гарантированной синхронизации
+    const syncKey = `mdc_sync_${eventType}`;
+    localStorage.setItem(syncKey, Date.now().toString());
+    
     this.triggerLocalListeners(eventType);
   }
 
