@@ -289,7 +289,9 @@ export const getOnlineUsers = (): User[] => {
   const stored = localStorage.getItem(onlineKey);
   if (stored) {
     try {
-      return JSON.parse(stored);
+      const users = JSON.parse(stored);
+      console.log('getOnlineUsers - raw data:', users);
+      return users;
     } catch {
       return [];
     }
