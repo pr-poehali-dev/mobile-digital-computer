@@ -419,6 +419,10 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
                 </div>
               )}
             </Card>
+
+            {survSystemEnabled && (
+              <ShiftControls currentUser={currentUser} />
+            )}
           </div>
 
           <div className="lg:col-span-2">
@@ -449,10 +453,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
               </CardHeader>
               <CardContent>
                 {activeTab === 'statistics' && survSystemEnabled ? (
-                  <div className="space-y-6">
-                    <ShiftControls currentUser={currentUser} />
-                    <StatisticsTab currentUser={currentUser} canViewAllStats={false} />
-                  </div>
+                  <StatisticsTab currentUser={currentUser} canViewAllStats={false} />
                 ) : (
                   <EmployeeTabsContent activeTab={activeTab} myCalls={myCalls} userId={currentUser.id} />
                 )}
