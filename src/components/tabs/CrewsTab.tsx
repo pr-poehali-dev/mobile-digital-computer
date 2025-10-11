@@ -16,10 +16,15 @@ import {
 } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { useSync } from "@/hooks/use-sync";
+import { type User } from '@/lib/auth';
 import CrewCard from "./crews/CrewCard";
 import CrewDialogs from "./crews/CrewDialogs";
 
-const CrewsTab = () => {
+interface CrewsTabProps {
+  currentUser: User | null;
+}
+
+const CrewsTab = ({ currentUser }: CrewsTabProps) => {
   const [crews, setCrews] = useState<Crew[]>([]);
   const [calls, setCalls] = useState<ReturnType<typeof getCalls>>([]);
   const [availableUsers, setAvailableUsers] = useState<ReturnType<typeof getAvailableCrewMembers>>([]);
@@ -102,7 +107,7 @@ const CrewsTab = () => {
 
   const handleSaveStatus = () => {
     if (editDialog.crew) {
-      updateCrewStatus(editDialog.crew.id, formData.status, formData.location);
+      updateCrewStatus(editDialog.crew.id, formData.status, formData.location, currentUser?.id);
       loadCrews();
       setEditDialog({ open: false, crew: null });
       toast({
@@ -153,7 +158,7 @@ const CrewsTab = () => {
       });
       return;
     }
-    createCrew(crewFormData.unitName, crewFormData.members);
+    createCrew(crewFormData.unitName, crewFormData.members, currentUser?.id);
     loadCrews();
     setCreateDialog(false);
     toast({
@@ -164,7 +169,7 @@ const CrewsTab = () => {
 
   const handleDelete = () => {
     if (deleteDialog.crewId) {
-      deleteCrew(deleteDialog.crewId);
+      deleteCrew(deleteDialog.crewId, currentUser?.id);
       loadCrews();
       setDeleteDialog({ open: false, crewId: null });
       toast({
@@ -181,8 +186,8 @@ const CrewsTab = () => {
 
   const handleAssignToCall = () => {
     if (assignDialog.crew && selectedCallId) {
-      assignCrewToCall(selectedCallId, assignDialog.crew.id);
-      updateCrewStatus(assignDialog.crew.id, "en-route");
+      assignCrewToCall(selectedCallId, assignDialog.crew.id, currentUser?.id);
+      updateCrewStatus(assignDialog.crew.id, "en-route", undefined, currentUser?.id);
       loadCrews();
       loadCalls();
       setAssignDialog({ open: false, crew: null });
@@ -194,7 +199,7 @@ const CrewsTab = () => {
   };
 
   const handleStatusChange = (crewId: number, status: Crew["status"]) => {
-    updateCrewStatus(crewId, status);
+    updateCrewStatus(crewId, status, undefined, currentUser?.id);
     loadCrews();
     const crew = crews.find((c) => c.id === crewId);
     if (crew) {

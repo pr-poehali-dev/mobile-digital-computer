@@ -583,6 +583,7 @@ export const addActivityLog = (log: Omit<ActivityLog, 'id' | 'timestamp'>): void
   };
   logs.unshift(newLog);
   storage.set(KEYS.ACTIVITY_LOG, logs);
+  syncManager.notify('logs_updated');
 };
 
 export const getUserActivityLogs = (userId: string): ActivityLog[] => {

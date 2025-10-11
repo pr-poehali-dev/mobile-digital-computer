@@ -96,8 +96,6 @@ const LogTab = ({ currentUser }: LogTabProps) => {
   const allSelected = filteredLogs.length > 0 && selectedLogs.size === filteredLogs.length;
   const someSelected = selectedLogs.size > 0 && selectedLogs.size < filteredLogs.length;
 
-  console.log('LogTab: currentUser =', currentUser, 'canManage =', canManage);
-
   return (
     <div className="space-y-6">
       <Card>

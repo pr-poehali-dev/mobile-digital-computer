@@ -204,7 +204,7 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
                 </Button>
               </div>
             ) : (
-              <CrewsTab />
+              <CrewsTab currentUser={currentUser} />
             )}
           </TabsContent>
 
