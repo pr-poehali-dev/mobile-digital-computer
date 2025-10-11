@@ -76,6 +76,18 @@ interface OnlineUserWithTimestamp extends User {
   lastHeartbeat?: number;
 }
 
+export interface UserSettings {
+  userId: string;
+  soundOnNewCall: boolean;
+  statusNotifications: boolean;
+}
+
+export interface SystemLockdown {
+  active: boolean;
+  activatedAt?: string;
+  activatedBy?: string;
+}
+
 // ============================================================================
 // STORAGE KEYS
 // ============================================================================
@@ -91,6 +103,8 @@ const KEYS = {
   PANIC_ALERTS: 'mdc_panic_alerts',
   SIGNAL100_ALERT: 'mdc_signal100_alert',
   SIGNAL100_LAST_RESET: 'mdc_signal100_last_reset',
+  SYSTEM_LOCKDOWN: 'mdc_system_lockdown',
+  USER_SETTINGS: 'mdc_user_settings',
 } as const;
 
 
@@ -309,6 +323,8 @@ export const assignCrewToCall = (callId: string, crewId: number, dispatcherId?: 
         details: `${call.type} — ${call.address}`
       });
     });
+    
+    syncManager.notify('crew_assigned_to_call', { crewId, callId, members: crew.members });
   }
 };
 
@@ -970,6 +986,76 @@ export const getEmployeeStats = (userId: string) => {
     urgentCalls: userCalls.filter(c => c.priority === 'code99').length,
     highPriority: userCalls.filter(c => c.priority === 'code3').length,
   };
+};
+
+// ============================================================================
+// SYSTEM LOCKDOWN API
+// ============================================================================
+
+export const getSystemLockdown = (): SystemLockdown => {
+  return storage.get<SystemLockdown>(KEYS.SYSTEM_LOCKDOWN, { active: false });
+};
+
+export const activateSystemLockdown = (managerId: string): void => {
+  const lockdown: SystemLockdown = {
+    active: true,
+    activatedAt: new Date().toISOString(),
+    activatedBy: managerId
+  };
+  storage.set(KEYS.SYSTEM_LOCKDOWN, lockdown);
+  syncManager.notify('system_lockdown_changed', lockdown);
+  
+  const onlineUsers = getOnlineUsers();
+  onlineUsers.forEach(user => {
+    if (user.role !== 'manager') {
+      removeOnlineUser(user.id);
+    }
+  });
+};
+
+export const deactivateSystemLockdown = (): void => {
+  const lockdown: SystemLockdown = { active: false };
+  storage.set(KEYS.SYSTEM_LOCKDOWN, lockdown);
+  syncManager.notify('system_lockdown_changed', lockdown);
+};
+
+export const isSystemLocked = (): boolean => {
+  return getSystemLockdown().active;
+};
+
+// ============================================================================
+// USER SETTINGS API
+// ============================================================================
+
+export const getUserSettings = (userId: string): UserSettings => {
+  const allSettings = storage.get<UserSettings[]>(KEYS.USER_SETTINGS, []);
+  const userSettings = allSettings.find(s => s.userId === userId);
+  
+  return userSettings || {
+    userId,
+    soundOnNewCall: true,
+    statusNotifications: true
+  };
+};
+
+export const updateUserSettings = (userId: string, settings: Partial<Omit<UserSettings, 'userId'>>): void => {
+  const allSettings = storage.get<UserSettings[]>(KEYS.USER_SETTINGS, []);
+  const existingIndex = allSettings.findIndex(s => s.userId === userId);
+  
+  const updatedSettings: UserSettings = {
+    ...getUserSettings(userId),
+    ...settings,
+    userId
+  };
+  
+  if (existingIndex >= 0) {
+    allSettings[existingIndex] = updatedSettings;
+  } else {
+    allSettings.push(updatedSettings);
+  }
+  
+  storage.set(KEYS.USER_SETTINGS, allSettings);
+  syncManager.notify('user_settings_changed', { userId, settings: updatedSettings });
 };
 
 // ============================================================================

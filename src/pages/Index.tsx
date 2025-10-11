@@ -3,7 +3,8 @@ import LoginPage from '@/components/LoginPage';
 import Dashboard from '@/components/Dashboard';
 import EmployeeDashboard from '@/components/EmployeeDashboard';
 import { getUserSession, clearUserSession, type User } from '@/lib/auth';
-import { addOnlineUser, removeOnlineUser, addActivityLog } from '@/lib/store';
+import { addOnlineUser, removeOnlineUser, addActivityLog, isSystemLocked } from '@/lib/store';
+import { syncManager } from '@/lib/sync-manager';
 
 const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -38,9 +39,19 @@ const Index = () => {
       };
       window.addEventListener('beforeunload', handleBeforeUnload);
       
+      // Слушаем события блокировки системы
+      const handleLockdownChange = (event: any) => {
+        if (event.detail?.active && currentUser.role !== 'manager') {
+          handleLogout();
+        }
+      };
+      
+      syncManager.addEventListener('system_lockdown_changed', handleLockdownChange);
+      
       return () => {
         clearInterval(heartbeatInterval);
         window.removeEventListener('beforeunload', handleBeforeUnload);
+        syncManager.removeEventListener('system_lockdown_changed', handleLockdownChange);
         removeOnlineUser(currentUser.id);
       };
     }

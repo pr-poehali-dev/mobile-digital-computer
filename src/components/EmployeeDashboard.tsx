@@ -21,6 +21,8 @@ import PanicButton from './PanicButton';
 import PanicAlert from './PanicAlert';
 import Signal100Button from './Signal100Button';
 import Signal100Alert from './Signal100Alert';
+import { syncManager } from '@/lib/sync-manager';
+import { playNewCallSound } from '@/lib/notifications';
 
 interface EmployeeDashboardProps {
   onLogout: () => void;
@@ -81,6 +83,24 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
   };
 
   console.log('[EmployeeDashboard] Компонент монтируется, currentUser:', currentUser);
+  
+  useEffect(() => {
+    if (!currentUser || !myCrew) return;
+    
+    const handleCrewAssignment = (event: any) => {
+      const { crewId, members } = event.detail || {};
+      
+      if (crewId === myCrew.id && members?.includes(currentUser.id)) {
+        playNewCallSound(currentUser.id);
+      }
+    };
+    
+    syncManager.addEventListener('crew_assigned_to_call', handleCrewAssignment);
+    
+    return () => {
+      syncManager.removeEventListener('crew_assigned_to_call', handleCrewAssignment);
+    };
+  }, [currentUser, myCrew]);
   
   useSync(['dispatcher_shift_changed', 'crews_updated', 'calls_updated'], loadData, 2000);
   useSync(['online_users_changed'], loadAvailableUsers, 2000);

@@ -74,6 +74,21 @@ export const authenticate = async (userId: string, password: string): Promise<{ 
 
   const { password: _, ...userData } = userWithPassword;
   
+  const lockdownData = localStorage.getItem('mdc_system_lockdown');
+  if (lockdownData) {
+    try {
+      const lockdown = JSON.parse(lockdownData);
+      if (lockdown.active && userData.role !== 'manager') {
+        return {
+          success: false,
+          error: 'Доступ временно ограничен. Обратитесь к менеджеру.'
+        };
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }
+  
   return {
     success: true,
     user: userData

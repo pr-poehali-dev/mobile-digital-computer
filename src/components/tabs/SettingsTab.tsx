@@ -1,17 +1,93 @@
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import Icon from '@/components/ui/icon';
 import { type User } from '@/lib/auth';
+import { getUserSettings, updateUserSettings, getSystemLockdown, activateSystemLockdown, deactivateSystemLockdown } from '@/lib/store';
+import { useToast } from '@/hooks/use-toast';
+import { useSync } from '@/hooks/use-sync';
 
 interface SettingsTabProps {
   currentUser: User | null;
 }
 
 const SettingsTab = ({ currentUser }: SettingsTabProps) => {
+  const { toast } = useToast();
+  const [soundOnNewCall, setSoundOnNewCall] = useState(true);
+  const [statusNotifications, setStatusNotifications] = useState(true);
+  const [systemLocked, setSystemLocked] = useState(false);
+  const [lockdownDialog, setLockdownDialog] = useState(false);
+
+  useEffect(() => {
+    if (currentUser) {
+      const settings = getUserSettings(currentUser.id);
+      setSoundOnNewCall(settings.soundOnNewCall);
+      setStatusNotifications(settings.statusNotifications);
+    }
+    setSystemLocked(getSystemLockdown().active);
+  }, [currentUser]);
+
+  useSync(['system_lockdown_changed', 'user_settings_changed'], () => {
+    if (currentUser) {
+      const settings = getUserSettings(currentUser.id);
+      setSoundOnNewCall(settings.soundOnNewCall);
+      setStatusNotifications(settings.statusNotifications);
+    }
+    setSystemLocked(getSystemLockdown().active);
+  }, 1000);
+
+  const handleSoundToggle = (checked: boolean) => {
+    setSoundOnNewCall(checked);
+    if (currentUser) {
+      updateUserSettings(currentUser.id, { soundOnNewCall: checked });
+      toast({
+        title: checked ? 'Звук включен' : 'Звук выключен',
+        description: checked ? 'Звуковой сигнал будет воспроизводиться при новых вызовах' : 'Звуковой сигнал отключен'
+      });
+    }
+  };
+
+  const handleStatusNotificationsToggle = (checked: boolean) => {
+    setStatusNotifications(checked);
+    if (currentUser) {
+      updateUserSettings(currentUser.id, { statusNotifications: checked });
+      toast({
+        title: checked ? 'Уведомления включены' : 'Уведомления выключены',
+        description: checked ? 'Вы будете получать уведомления о статусах' : 'Уведомления о статусах отключены'
+      });
+    }
+  };
+
+  const handleLockdownToggle = () => {
+    if (systemLocked) {
+      deactivateSystemLockdown();
+      toast({
+        title: 'Блокировка снята',
+        description: 'Все пользователи могут входить в систему',
+        className: 'bg-success text-white'
+      });
+    } else {
+      setLockdownDialog(true);
+    }
+  };
+
+  const confirmLockdown = () => {
+    if (currentUser) {
+      activateSystemLockdown(currentUser.id);
+      toast({
+        title: 'Система заблокирована',
+        description: 'Только менеджеры могут войти в систему. Все остальные пользователи вышли из системы.',
+        variant: 'destructive'
+      });
+      setLockdownDialog(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -50,16 +126,16 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label>Звук при новом вызове</Label>
-              <p className="text-sm text-muted-foreground">Воспроизводить звуковой сигнал</p>
+              <p className="text-sm text-muted-foreground">Воспроизводить звуковой сигнал при назначении вызова</p>
             </div>
-            <Switch defaultChecked />
+            <Switch checked={soundOnNewCall} onCheckedChange={handleSoundToggle} />
           </div>
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label>Уведомления о статусах</Label>
               <p className="text-sm text-muted-foreground">Показывать изменения статусов экипажей</p>
             </div>
-            <Switch defaultChecked />
+            <Switch checked={statusNotifications} onCheckedChange={handleStatusNotificationsToggle} />
           </div>
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
@@ -132,6 +208,63 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
           </Button>
         </CardContent>
       </Card>
+
+      {currentUser?.role === 'manager' && (
+        <Card className="border-destructive">
+          <CardHeader>
+            <CardTitle className="text-destructive">Блокировка системы</CardTitle>
+            <CardDescription>Экстренная блокировка доступа для всех пользователей кроме менеджеров</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+              <div className="space-y-1">
+                <Label className="text-base font-semibold">
+                  {systemLocked ? '🔒 Система заблокирована' : '🔓 Система доступна'}
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  {systemLocked 
+                    ? 'Только менеджеры могут войти в систему'
+                    : 'Все пользователи могут входить в систему'
+                  }
+                </p>
+              </div>
+              <Switch 
+                checked={systemLocked} 
+                onCheckedChange={handleLockdownToggle}
+                className="data-[state=checked]:bg-destructive"
+              />
+            </div>
+            {systemLocked && (
+              <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <Icon name="AlertTriangle" size={20} className="text-destructive mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-semibold text-destructive">Система заблокирована</p>
+                  <p className="text-muted-foreground">Все пользователи кроме менеджеров вышли из системы и не могут войти обратно до снятия блокировки.</p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <AlertDialog open={lockdownDialog} onOpenChange={setLockdownDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Заблокировать систему?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Это действие немедленно выведет всех пользователей из системы (кроме менеджеров) и заблокирует их вход до снятия блокировки.
+              <br /><br />
+              <strong>Внимание:</strong> Используйте эту функцию только в экстренных случаях.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmLockdown} className="bg-destructive hover:bg-destructive/90">
+              Заблокировать
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
