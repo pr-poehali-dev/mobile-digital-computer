@@ -25,12 +25,17 @@ const getLogTypeConfig = (type: ActivityLog['type']) => {
     case 'crew_created':
     case 'crew_deleted':
       return { label: 'Экипаж', icon: 'Users', color: 'bg-success/10 text-success' };
+    case 'panic_activated':
+      return { label: 'ТРЕВОГА', icon: 'AlertTriangle', color: 'bg-red-100 text-red-700 border-red-500' };
+    case 'panic_reset':
+      return { label: 'Сброс тревоги', icon: 'XCircle', color: 'bg-gray-100 text-gray-700' };
   }
 };
 
 const LogTab = ({ currentUser }: LogTabProps) => {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'panic'>('all');
   const [selectedLogs, setSelectedLogs] = useState<Set<string>>(new Set());
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; type: 'one' | 'selected' | 'all'; logId?: string }>({ 
     open: false, 
@@ -46,6 +51,9 @@ const LogTab = ({ currentUser }: LogTabProps) => {
   useSync(['logs_updated'], loadLogs, 2000);
 
   const filteredLogs = logs.filter(log => {
+    if (filterType === 'panic' && log.type !== 'panic_activated' && log.type !== 'panic_reset') {
+      return false;
+    }
     if (!searchQuery) return true;
     const search = searchQuery.toLowerCase();
     return (
@@ -55,6 +63,8 @@ const LogTab = ({ currentUser }: LogTabProps) => {
       log.details?.toLowerCase().includes(search)
     );
   });
+
+  const panicLogsCount = logs.filter(log => log.type === 'panic_activated' || log.type === 'panic_reset').length;
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -101,7 +111,27 @@ const LogTab = ({ currentUser }: LogTabProps) => {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-4">
-            <CardTitle>Журнал активности</CardTitle>
+            <div>
+              <CardTitle>Журнал активности</CardTitle>
+              <div className="flex items-center gap-2 mt-2">
+                <Button
+                  variant={filterType === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFilterType('all')}
+                >
+                  Все записи ({logs.length})
+                </Button>
+                <Button
+                  variant={filterType === 'panic' ? 'destructive' : 'outline'}
+                  size="sm"
+                  onClick={() => setFilterType('panic')}
+                  className="gap-2"
+                >
+                  <Icon name="AlertTriangle" size={16} />
+                  Сигналы тревоги ({panicLogsCount})
+                </Button>
+              </div>
+            </div>
             <div className="flex items-center gap-2">
               <div className="relative">
                 <Input 
@@ -170,10 +200,14 @@ const LogTab = ({ currentUser }: LogTabProps) => {
               
               {filteredLogs.map((log) => {
                 const typeConfig = getLogTypeConfig(log.type);
+                const isPanic = log.type === 'panic_activated';
+                const isPanicReset = log.type === 'panic_reset';
                 return (
                   <div
                     key={log.id}
-                    className="flex items-start gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                    className={`flex items-start gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors ${
+                      isPanic ? 'border-red-500 bg-red-50 border-2' : ''
+                    } ${isPanicReset ? 'border-gray-400 bg-gray-50' : ''}`}
                   >
                     {canManage && (
                       <div className="flex-shrink-0 pt-1">
@@ -194,8 +228,15 @@ const LogTab = ({ currentUser }: LogTabProps) => {
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <Badge variant="outline" className="text-xs">{typeConfig.label}</Badge>
-                            <span className="text-sm font-medium">{log.description}</span>
+                            <Badge 
+                              variant={isPanic ? 'destructive' : 'outline'} 
+                              className={`text-xs ${isPanic ? 'animate-pulse font-bold' : ''}`}
+                            >
+                              {typeConfig.label}
+                            </Badge>
+                            <span className={`text-sm ${isPanic ? 'font-bold text-red-900' : 'font-medium'}`}>
+                              {log.description}
+                            </span>
                           </div>
                           {log.details && (
                             <p className="text-sm text-muted-foreground">{log.details}</p>
