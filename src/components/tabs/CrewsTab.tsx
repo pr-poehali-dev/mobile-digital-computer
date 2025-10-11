@@ -1,28 +1,16 @@
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import Icon from '@/components/ui/icon';
+import { getCrews, updateCrewStatus, type Crew } from '@/lib/store';
+import { useToast } from '@/hooks/use-toast';
 
-type CrewStatus = 'available' | 'en-route' | 'on-scene' | 'unavailable';
-
-interface Crew {
-  id: string;
-  unit: string;
-  status: CrewStatus;
-  location?: string;
-  lastUpdate: string;
-}
-
-const mockCrews: Crew[] = [
-  { id: '1', unit: 'NU-10', status: 'available', location: 'Станция №3', lastUpdate: '13:45' },
-  { id: '2', unit: 'NU-12', status: 'en-route', location: 'ул. Ленина, 45', lastUpdate: '13:48' },
-  { id: '3', unit: 'NU-15', status: 'on-scene', location: 'пр. Мира, 120', lastUpdate: '13:30' },
-  { id: '4', unit: 'NU-07', status: 'available', location: 'Станция №1', lastUpdate: '13:50' },
-  { id: '5', unit: 'NU-22', status: 'unavailable', location: 'Техобслуживание', lastUpdate: '12:00' },
-  { id: '6', unit: 'NU-18', status: 'en-route', location: 'ул. Гагарина, 78', lastUpdate: '13:42' },
-];
-
-const getStatusConfig = (status: CrewStatus) => {
+const getStatusConfig = (status: Crew['status']) => {
   switch (status) {
     case 'available':
       return { label: 'Доступен', variant: 'default' as const, bgColor: 'bg-success/10', textColor: 'text-success', icon: 'CheckCircle2' };
@@ -36,8 +24,44 @@ const getStatusConfig = (status: CrewStatus) => {
 };
 
 const CrewsTab = () => {
-  const availableCount = mockCrews.filter(c => c.status === 'available').length;
-  const activeCount = mockCrews.filter(c => c.status === 'en-route' || c.status === 'on-scene').length;
+  const [crews, setCrews] = useState<Crew[]>([]);
+  const [editDialog, setEditDialog] = useState<{ open: boolean; crew: Crew | null }>({ open: false, crew: null });
+  const [formData, setFormData] = useState({
+    status: 'available' as Crew['status'],
+    location: ''
+  });
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadCrews();
+  }, []);
+
+  const loadCrews = () => {
+    setCrews(getCrews());
+  };
+
+  const handleEdit = (crew: Crew) => {
+    setFormData({
+      status: crew.status,
+      location: crew.location || ''
+    });
+    setEditDialog({ open: true, crew });
+  };
+
+  const handleSave = () => {
+    if (editDialog.crew) {
+      updateCrewStatus(editDialog.crew.id, formData.status, formData.location);
+      loadCrews();
+      setEditDialog({ open: false, crew: null });
+      toast({
+        title: 'Статус обновлен',
+        description: `Экипаж ${editDialog.crew.unitName} успешно обновлен`,
+      });
+    }
+  };
+
+  const availableCount = crews.filter(c => c.status === 'available').length;
+  const activeCount = crews.filter(c => c.status === 'en-route' || c.status === 'on-scene').length;
 
   return (
     <div className="space-y-6">
@@ -47,7 +71,7 @@ const CrewsTab = () => {
             <CardTitle className="text-sm font-medium text-muted-foreground">Всего экипажей</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{mockCrews.length}</div>
+            <div className="text-3xl font-bold">{crews.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -69,18 +93,20 @@ const CrewsTab = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {mockCrews.map((crew) => {
+        {crews.map((crew) => {
           const statusConfig = getStatusConfig(crew.status);
+          const lastUpdate = new Date(crew.lastUpdate).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+          
           return (
             <Card key={crew.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div>
-                    <CardTitle className="text-lg">{crew.unit}</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">Обновлено: {crew.lastUpdate}</p>
+                    <CardTitle className="text-lg">{crew.unitName}</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">Обновлено: {lastUpdate}</p>
                   </div>
-                  <Button variant="ghost" size="icon">
-                    <Icon name="MoreVertical" size={18} />
+                  <Button variant="ghost" size="icon" onClick={() => handleEdit(crew)}>
+                    <Icon name="Settings" size={18} />
                   </Button>
                 </div>
               </CardHeader>
@@ -97,15 +123,100 @@ const CrewsTab = () => {
                   </div>
                 )}
 
-                <Button variant="outline" className="w-full" size="sm">
-                  <Icon name="Eye" size={16} className="mr-2" />
-                  Подробнее
-                </Button>
+                <div className="flex gap-2">
+                  {crew.status === 'available' && (
+                    <Button 
+                      variant="outline" 
+                      className="flex-1" 
+                      size="sm"
+                      onClick={() => {
+                        setFormData({ status: 'unavailable', location: crew.location || '' });
+                        setEditDialog({ open: true, crew });
+                      }}
+                    >
+                      <Icon name="XCircle" size={16} className="mr-1" />
+                      Снять
+                    </Button>
+                  )}
+                  {crew.status === 'unavailable' && (
+                    <Button 
+                      variant="outline" 
+                      className="flex-1" 
+                      size="sm"
+                      onClick={() => {
+                        setFormData({ status: 'available', location: crew.location || '' });
+                        setEditDialog({ open: true, crew });
+                      }}
+                    >
+                      <Icon name="CheckCircle2" size={16} className="mr-1" />
+                      Активировать
+                    </Button>
+                  )}
+                  {(crew.status === 'en-route' || crew.status === 'on-scene') && (
+                    <Button 
+                      variant="outline" 
+                      className="flex-1" 
+                      size="sm"
+                      onClick={() => {
+                        updateCrewStatus(crew.id, 'available');
+                        loadCrews();
+                        toast({ title: 'Экипаж освобожден', description: `${crew.unitName} теперь доступен` });
+                      }}
+                    >
+                      <Icon name="Home" size={16} className="mr-1" />
+                      Освободить
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           );
         })}
       </div>
+
+      <Dialog open={editDialog.open} onOpenChange={(open) => setEditDialog({ open, crew: null })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Управление экипажем {editDialog.crew?.unitName}</DialogTitle>
+            <DialogDescription>
+              Измените статус и местоположение экипажа
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="status">Статус</Label>
+              <Select value={formData.status} onValueChange={(value: Crew['status']) => setFormData({ ...formData, status: value })}>
+                <SelectTrigger id="status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="available">Доступен</SelectItem>
+                  <SelectItem value="en-route">В пути</SelectItem>
+                  <SelectItem value="on-scene">На месте</SelectItem>
+                  <SelectItem value="unavailable">Недоступен</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="location">Местоположение</Label>
+              <Input
+                id="location"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                placeholder="Станция №1, ул. Ленина, 45..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialog({ open: false, crew: null })}>
+              Отмена
+            </Button>
+            <Button onClick={handleSave}>
+              Сохранить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

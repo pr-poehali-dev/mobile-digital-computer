@@ -31,16 +31,19 @@ const USERS_DB = [
 export const authenticate = async (username: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
   await new Promise(resolve => setTimeout(resolve, 500));
 
-  const user = USERS_DB.find(u => u.username === username && u.password === password);
+  const usersData = localStorage.getItem('mdc_users');
+  const users = usersData ? JSON.parse(usersData) : USERS_DB;
+  
+  const userWithPassword = users.find((u: any) => u.username === username && u.password === password);
 
-  if (!user) {
+  if (!userWithPassword) {
     return {
       success: false,
       error: 'Неверный логин или пароль'
     };
   }
 
-  const { password: _, ...userData } = user;
+  const { password: _, ...userData } = userWithPassword;
   
   return {
     success: true,
