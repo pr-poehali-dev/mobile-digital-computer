@@ -239,7 +239,7 @@ export const removeOnlineUser = (userId: string): void => {
 };
 
 export const getAvailableCrewMembers = (): User[] => {
-  const excludedRoles = ['Диспетчер', 'Менеджер', 'Руководитель'];
+  const excludedRoles = ['manager', 'dispatcher', 'supervisor'];
   const onlineUsers = getOnlineUsers();
   return onlineUsers.filter(u => !excludedRoles.includes(u.role));
 };
