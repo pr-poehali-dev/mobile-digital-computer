@@ -111,21 +111,18 @@ const Signal100Alert = ({ currentUser }: Signal100AlertProps) => {
 
   return (
     <Card className="border-yellow-500 border-2 bg-yellow-50 animate-pulse">
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <Icon name="Radio" size={24} className="text-yellow-600 flex-shrink-0" />
-          <div className="flex-1">
-            <h3 className="font-bold text-yellow-900 text-base">🟡 СИГНАЛ 100</h3>
+      <CardContent className="p-3">
+        <div className="flex items-start gap-2">
+          <Icon name="Radio" size={20} className="text-yellow-600 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <h3 className="font-bold text-yellow-900 text-sm">🟡 СИГНАЛ 100</h3>
             {signal100.crewName && (
-              <p className="text-sm text-yellow-800 font-semibold mt-1">
+              <p className="text-xs text-yellow-800 font-semibold mt-0.5">
                 Экипаж: {signal100.crewName}
               </p>
             )}
-            <p className="text-sm text-yellow-700 mt-1">
-              Активировал: {signal100.triggeredByName}
-            </p>
-            <p className="text-xs text-yellow-600 mt-1">
-              Активировано: {new Date(signal100.triggeredAt).toLocaleTimeString('ru-RU')}
+            <p className="text-xs text-yellow-700 mt-0.5">
+              {signal100.triggeredByName}
             </p>
             
             {currentUser && canManageAccounts(currentUser) && (
@@ -133,10 +130,10 @@ const Signal100Alert = ({ currentUser }: Signal100AlertProps) => {
                 onClick={handleReset}
                 size="sm"
                 variant="outline"
-                className="mt-3 w-full border-yellow-600 text-yellow-700 hover:bg-yellow-100"
+                className="mt-2 w-full border-yellow-600 text-yellow-700 hover:bg-yellow-100 h-7 text-xs"
               >
-                <Icon name="RadioOff" size={16} className="mr-2" />
-                Отменить сигнал
+                <Icon name="RadioOff" size={14} className="mr-1" />
+                Отменить
               </Button>
             )}
           </div>

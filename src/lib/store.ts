@@ -89,6 +89,7 @@ const KEYS = {
   ONLINE_USERS: 'mdc_online_users',
   PANIC_ALERTS: 'mdc_panic_alerts',
   SIGNAL100_ALERT: 'mdc_signal100_alert',
+  SIGNAL100_LAST_RESET: 'mdc_signal100_last_reset',
 } as const;
 
 
@@ -599,6 +600,22 @@ export const getActivePanicAlerts = (): Crew[] => {
 // SIGNAL 100 API
 // ============================================================================
 
+export const canActivateSignal100 = (): { canActivate: boolean; remainingSeconds: number } => {
+  const lastReset = storage.get<number>(KEYS.SIGNAL100_LAST_RESET, 0);
+  const now = Date.now();
+  const elapsed = now - lastReset;
+  const cooldown = 30 * 1000;
+  
+  if (elapsed < cooldown) {
+    return {
+      canActivate: false,
+      remainingSeconds: Math.ceil((cooldown - elapsed) / 1000)
+    };
+  }
+  
+  return { canActivate: true, remainingSeconds: 0 };
+};
+
 export const activateSignal100 = (crewId: number | null, userId: string): void => {
   const users = getAllUsers();
   const user = users.find(u => u.id === userId);
@@ -669,6 +686,11 @@ export const resetSignal100 = (userId: string): void => {
   
   storage.set(KEYS.CREWS, updatedCrews);
   storage.set(KEYS.SIGNAL100_ALERT, null);
+  
+  if (userId !== 'system') {
+    storage.set(KEYS.SIGNAL100_LAST_RESET, Date.now());
+  }
+  
   syncManager.notify('crews_updated');
   syncManager.notify('signal100_changed', { key: KEYS.SIGNAL100_ALERT, value: null });
   

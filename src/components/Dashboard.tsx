@@ -77,7 +77,7 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="fixed top-4 right-4 z-50 space-y-2 max-w-md">
+      <div className="fixed top-4 right-20 z-40 space-y-2 max-w-sm">
         <Signal100Alert currentUser={currentUser} />
         <DispatcherPanicAlert currentUser={currentUser} />
       </div>

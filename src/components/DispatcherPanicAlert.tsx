@@ -124,26 +124,23 @@ const DispatcherPanicAlert = ({ currentUser }: DispatcherPanicAlertProps) => {
   if (visibleCrews.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2 max-w-md">
+    <>
       {visibleCrews.map(crew => {
         return (
           <Card 
             key={crew.id} 
             className="border-red-600 border-2 bg-red-50 animate-pulse"
           >
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <Icon name="AlertTriangle" size={32} className="text-red-600 flex-shrink-0" />
-                <div className="flex-1">
-                  <h3 className="font-bold text-red-900 text-lg">🚨 ТРЕВОГА!</h3>
-                  <p className="text-sm text-red-800 font-semibold mt-1">
+            <CardContent className="p-3">
+              <div className="flex items-start gap-2">
+                <Icon name="AlertTriangle" size={20} className="text-red-600 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-red-900 text-sm">🚨 ТРЕВОГА!</h3>
+                  <p className="text-xs text-red-800 font-semibold mt-0.5">
                     Экипаж: {crew.unitName}
                   </p>
-                  <p className="text-sm text-red-700 mt-1">
-                    📍 Местоположение: {crew.location || 'неизвестно'}
-                  </p>
-                  <p className="text-xs text-red-600 mt-1">
-                    Активировано: {crew.panicTriggeredAt ? new Date(crew.panicTriggeredAt).toLocaleTimeString('ru-RU') : ''}
+                  <p className="text-xs text-red-700 mt-0.5">
+                    📍 {crew.location || 'неизвестно'}
                   </p>
                   
                   {currentUser && canManageAccounts(currentUser) && (
@@ -151,10 +148,10 @@ const DispatcherPanicAlert = ({ currentUser }: DispatcherPanicAlertProps) => {
                       onClick={() => handleResetPanic(crew)}
                       size="sm"
                       variant="outline"
-                      className="mt-3 w-full border-red-600 text-red-700 hover:bg-red-100"
+                      className="mt-2 w-full border-red-600 text-red-700 hover:bg-red-100 h-7 text-xs"
                     >
-                      <Icon name="XCircle" size={16} className="mr-2" />
-                      Сбросить тревогу
+                      <Icon name="XCircle" size={14} className="mr-1" />
+                      Сбросить
                     </Button>
                   )}
                 </div>
@@ -163,7 +160,7 @@ const DispatcherPanicAlert = ({ currentUser }: DispatcherPanicAlertProps) => {
           </Card>
         );
       })}
-    </div>
+    </>
   );
 };
 

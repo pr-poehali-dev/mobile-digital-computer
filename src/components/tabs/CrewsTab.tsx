@@ -17,6 +17,7 @@ import {
   activateSignal100,
   resetSignal100,
   getActiveSignal100,
+  canActivateSignal100,
   type Crew,
 } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
@@ -241,6 +242,17 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
 
   const handleSignal100Activate = () => {
     if (!currentUser) return;
+    
+    const { canActivate, remainingSeconds } = canActivateSignal100();
+    
+    if (!canActivate) {
+      toast({
+        title: 'Тайм-аут активен',
+        description: `Повторный запуск сигнала 100 возможен через ${remainingSeconds} сек`,
+        variant: 'destructive',
+      });
+      return;
+    }
     
     activateSignal100(null, currentUser.id);
     toast({
