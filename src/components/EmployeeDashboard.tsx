@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Icon from '@/components/ui/icon';
 import ProfileDialog from './ProfileDialog';
 import { type User } from '@/lib/auth';
-import { getUserCrew, getCrewCalls, updateCrewStatus, isDispatcherOnDuty, getActiveDispatcherShifts, getAvailableCrewMembers, createCrew, deleteCrew, type Crew, type Call } from '@/lib/store';
+import { getUserCrew, getCrewCalls, updateCrewStatus, isDispatcherOnDuty, getActiveDispatcherShifts, getAvailableCrewMembers, createCrew, deleteCrew, getSystemRestrictions, type Crew, type Call } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { useSync } from '@/hooks/use-sync';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -44,7 +44,7 @@ const getStatusConfig = (status: Crew['status']) => {
 
 const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) => {
   const [profileOpen, setProfileOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'calls' | 'analytics' | 'logs'>('calls');
+  const [activeTab, setActiveTab] = useState<'calls' | 'analytics' | 'logs'>('logs');
   const [myCrew, setMyCrew] = useState<Crew | null>(null);
   const [myCalls, setMyCalls] = useState<Call[]>([]);
   const [dispatcherOnDuty, setDispatcherOnDuty] = useState(false);
@@ -53,6 +53,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<ReturnType<typeof getAvailableCrewMembers>>([]);
   const [crewFormData, setCrewFormData] = useState({ unitName: '', members: [] as string[] });
+  const [dispatchSystemDisabled, setDispatchSystemDisabled] = useState(false);
   const { toast } = useToast();
 
   const loadData = () => {
@@ -71,6 +72,13 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
     const dispatcherStatus = isDispatcherOnDuty();
     setDispatcherOnDuty(dispatcherStatus);
     setDispatcherShifts(getActiveDispatcherShifts());
+    
+    const restrictions = getSystemRestrictions();
+    setDispatchSystemDisabled(restrictions.dispatcherSystemDisabled);
+    
+    if (restrictions.dispatcherSystemDisabled && (activeTab === 'calls' || activeTab === 'analytics')) {
+      setActiveTab('logs');
+    }
     
     if (dispatcherStatus && (createDialog || deleteDialog)) {
       setCreateDialog(false);
@@ -102,7 +110,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
     };
   }, [currentUser, myCrew]);
   
-  useSync(['dispatcher_shift_changed', 'crews_updated', 'calls_updated'], loadData, 2000);
+  useSync(['dispatcher_shift_changed', 'crews_updated', 'calls_updated', 'system_restrictions_changed'], loadData, 2000);
   useSync(['online_users_changed'], loadAvailableUsers, 2000);
 
   const handleCreateCrew = async () => {
@@ -246,17 +254,31 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Icon name="Users" size={20} />
-                  Мой экипаж
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {myCrew ? (
+        {dispatchSystemDisabled ? (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center justify-center py-20">
+                <Icon name="ShieldAlert" size={64} className="text-warning mb-4 opacity-50" />
+                <h3 className="text-2xl font-semibold mb-2">Диспетчерская система отключена</h3>
+                <p className="text-muted-foreground text-center mb-6">
+                  Менеджер временно отключил диспетчерскую систему.<br />
+                  Управление экипажами и вызовами недоступно.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1 space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Icon name="Users" size={20} />
+                    Мой экипаж
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {myCrew ? (
                   <div className="space-y-4">
                     <div>
                       <p className="text-2xl font-bold">{myCrew.unitName}</p>
@@ -416,7 +438,8 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
               </CardContent>
             </Card>
           </div>
-        </div>
+          </div>
+        )}
       </main>
 
       <ProfileDialog

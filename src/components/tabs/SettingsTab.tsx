@@ -104,10 +104,10 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
   const handleDispatcherSystemToggle = (checked: boolean) => {
     updateSystemRestrictions({ dispatcherSystemDisabled: checked });
     toast({
-      title: checked ? 'Система диспетчеров отключена' : 'Система диспетчеров включена',
+      title: checked ? 'Диспетчерская система отключена' : 'Диспетчерская система включена',
       description: checked 
-        ? 'Все диспетчеры сняты с дежурства. Заступить на дежурство невозможно.'
-        : 'Диспетчеры могут заступать на дежурство',
+        ? 'Все разделы скрыты. Диспетчеры заморожены и сняты с дежурства. Сотрудники не видят экипажи и вызовы.'
+        : 'Диспетчерская система восстановлена. Диспетчеры разморожены.',
       variant: checked ? 'destructive' : 'default'
     });
   };
@@ -302,12 +302,12 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
               <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
                 <div className="space-y-1">
                   <Label className="text-base font-semibold">
-                    Система диспетчеров
+                    Диспетчерская система
                   </Label>
                   <p className="text-sm text-muted-foreground">
                     {dispatcherSystemDisabled 
-                      ? 'Заступить на дежурство невозможно. Все диспетчеры сняты.'
-                      : 'Диспетчеры могут заступать на дежурство'
+                      ? 'Система отключена. Разделы экипажей, вызовов и аналитики скрыты. Диспетчеры заморожены.'
+                      : 'Система работает. Все пользователи видят разделы диспетчерской системы.'
                     }
                   </p>
                 </div>

@@ -1124,12 +1124,49 @@ export const updateSystemRestrictions = (restrictions: Partial<SystemRestriction
   storage.set(KEYS.SYSTEM_RESTRICTIONS, updated);
   syncManager.notify('system_restrictions_changed', updated);
   
-  if (restrictions.dispatcherSystemDisabled) {
-    const shifts = storage.get<DispatcherShift[]>(KEYS.DISPATCHER_SHIFTS, []);
-    const activeShifts = shifts.filter(s => s.isActive);
-    activeShifts.forEach(shift => {
-      endDispatcherShift(shift.dispatcherId);
-    });
+  if (restrictions.dispatcherSystemDisabled !== undefined) {
+    const users = getAllUsers();
+    const dispatchers = users.filter(u => u.role === 'dispatcher');
+    
+    if (restrictions.dispatcherSystemDisabled) {
+      const shifts = storage.get<DispatcherShift[]>(KEYS.DISPATCHER_SHIFTS, []);
+      const activeShifts = shifts.filter(s => s.isActive);
+      activeShifts.forEach(shift => {
+        endDispatcherShift(shift.dispatcherId);
+      });
+      
+      const updatedUsers = users.map(u => {
+        if (u.role === 'dispatcher' && !u.frozen) {
+          return {
+            ...u,
+            frozen: true,
+            frozenBy: 'system',
+            frozenAt: new Date().toISOString(),
+            frozenBySystem: true
+          };
+        }
+        return u;
+      });
+      
+      storage.set(KEYS.USERS, updatedUsers);
+      syncManager.notify('users_updated');
+    } else {
+      const updatedUsers = users.map(u => {
+        if (u.role === 'dispatcher' && u.frozenBySystem) {
+          return {
+            ...u,
+            frozen: false,
+            frozenBy: undefined,
+            frozenAt: undefined,
+            frozenBySystem: undefined
+          };
+        }
+        return u;
+      });
+      
+      storage.set(KEYS.USERS, updatedUsers);
+      syncManager.notify('users_updated');
+    }
   }
 };
 

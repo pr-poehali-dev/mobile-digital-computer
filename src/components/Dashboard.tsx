@@ -15,7 +15,7 @@ import DispatcherPanicAlert from './DispatcherPanicAlert';
 import Signal100Alert from './Signal100Alert';
 import { type User } from '@/lib/auth';
 import { canManageAccounts } from '@/lib/permissions';
-import { startDispatcherShift, endDispatcherShift, isUserOnDuty, getActiveDispatcherShifts, isDispatcherSystemDisabled } from '@/lib/store';
+import { startDispatcherShift, endDispatcherShift, isUserOnDuty, getActiveDispatcherShifts, isDispatcherSystemDisabled, getSystemRestrictions } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { useSync } from '@/hooks/use-sync';
 
@@ -29,12 +29,19 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
   const [profileOpen, setProfileOpen] = useState(false);
   const [isOnDuty, setIsOnDuty] = useState(false);
   const [activeDispatchers, setActiveDispatchers] = useState(0);
+  const [dispatchSystemDisabled, setDispatchSystemDisabled] = useState(false);
   const { toast } = useToast();
 
   const updateStatus = () => {
     if (currentUser) {
       setIsOnDuty(isUserOnDuty(currentUser.id));
       setActiveDispatchers(getActiveDispatcherShifts().length);
+    }
+    const restrictions = getSystemRestrictions();
+    setDispatchSystemDisabled(restrictions.dispatcherSystemDisabled);
+    
+    if (restrictions.dispatcherSystemDisabled && (activeTab === 'crews' || activeTab === 'calls' || activeTab === 'analytics')) {
+      setActiveTab('log');
     }
   };
 
@@ -179,19 +186,23 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
 
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${canManageAccounts(currentUser) ? 'grid-cols-6' : 'grid-cols-5'} lg:w-auto lg:inline-grid`}>
-            <TabsTrigger value="crews" className="space-x-2">
-              <Icon name="Users" size={16} />
-              <span className="hidden sm:inline">Экипажи</span>
-            </TabsTrigger>
-            <TabsTrigger value="calls" className="space-x-2">
-              <Icon name="Phone" size={16} />
-              <span className="hidden sm:inline">Вызовы</span>
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="space-x-2">
-              <Icon name="BarChart3" size={16} />
-              <span className="hidden sm:inline">Аналитика</span>
-            </TabsTrigger>
+          <TabsList className={`grid w-full ${canManageAccounts(currentUser) && !dispatchSystemDisabled ? 'grid-cols-6' : dispatchSystemDisabled ? 'grid-cols-3' : 'grid-cols-5'} lg:w-auto lg:inline-grid`}>
+            {!dispatchSystemDisabled && (
+              <>
+                <TabsTrigger value="crews" className="space-x-2">
+                  <Icon name="Users" size={16} />
+                  <span className="hidden sm:inline">Экипажи</span>
+                </TabsTrigger>
+                <TabsTrigger value="calls" className="space-x-2">
+                  <Icon name="Phone" size={16} />
+                  <span className="hidden sm:inline">Вызовы</span>
+                </TabsTrigger>
+                <TabsTrigger value="analytics" className="space-x-2">
+                  <Icon name="BarChart3" size={16} />
+                  <span className="hidden sm:inline">Аналитика</span>
+                </TabsTrigger>
+              </>
+            )}
             <TabsTrigger value="log" className="space-x-2">
               <Icon name="FileText" size={16} />
               <span className="hidden sm:inline">Журнал</span>
@@ -208,41 +219,45 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="crews" className="space-y-4">
-            {currentUser?.role === 'dispatcher' && !isOnDuty ? (
-              <div className="flex flex-col items-center justify-center py-20">
-                <Icon name="Lock" size={64} className="text-muted-foreground mb-4 opacity-50" />
-                <h3 className="text-2xl font-semibold mb-2">Управление заблокировано</h3>
-                <p className="text-muted-foreground mb-6">Заступите на дежурство для управления экипажами</p>
-                <Button onClick={handleToggleDuty} size="lg">
-                  <Icon name="LogIn" size={18} className="mr-2" />
-                  Заступить на дежурство
-                </Button>
-              </div>
-            ) : (
-              <CrewsTab currentUser={currentUser} />
-            )}
-          </TabsContent>
+          {!dispatchSystemDisabled && (
+            <>
+              <TabsContent value="crews" className="space-y-4">
+                {currentUser?.role === 'dispatcher' && !isOnDuty ? (
+                  <div className="flex flex-col items-center justify-center py-20">
+                    <Icon name="Lock" size={64} className="text-muted-foreground mb-4 opacity-50" />
+                    <h3 className="text-2xl font-semibold mb-2">Управление заблокировано</h3>
+                    <p className="text-muted-foreground mb-6">Заступите на дежурство для управления экипажами</p>
+                    <Button onClick={handleToggleDuty} size="lg">
+                      <Icon name="LogIn" size={18} className="mr-2" />
+                      Заступить на дежурство
+                    </Button>
+                  </div>
+                ) : (
+                  <CrewsTab currentUser={currentUser} />
+                )}
+              </TabsContent>
 
-          <TabsContent value="calls" className="space-y-4">
-            {currentUser?.role === 'dispatcher' && !isOnDuty ? (
-              <div className="flex flex-col items-center justify-center py-20">
-                <Icon name="Lock" size={64} className="text-muted-foreground mb-4 opacity-50" />
-                <h3 className="text-2xl font-semibold mb-2">Управление заблокировано</h3>
-                <p className="text-muted-foreground mb-6">Заступите на дежурство для управления вызовами</p>
-                <Button onClick={handleToggleDuty} size="lg">
-                  <Icon name="LogIn" size={18} className="mr-2" />
-                  Заступить на дежурство
-                </Button>
-              </div>
-            ) : (
-              <CallsTab currentUser={currentUser} />
-            )}
-          </TabsContent>
+              <TabsContent value="calls" className="space-y-4">
+                {currentUser?.role === 'dispatcher' && !isOnDuty ? (
+                  <div className="flex flex-col items-center justify-center py-20">
+                    <Icon name="Lock" size={64} className="text-muted-foreground mb-4 opacity-50" />
+                    <h3 className="text-2xl font-semibold mb-2">Управление заблокировано</h3>
+                    <p className="text-muted-foreground mb-6">Заступите на дежурство для управления вызовами</p>
+                    <Button onClick={handleToggleDuty} size="lg">
+                      <Icon name="LogIn" size={18} className="mr-2" />
+                      Заступить на дежурство
+                    </Button>
+                  </div>
+                ) : (
+                  <CallsTab currentUser={currentUser} />
+                )}
+              </TabsContent>
 
-          <TabsContent value="analytics" className="space-y-4">
-            <AnalyticsTab />
-          </TabsContent>
+              <TabsContent value="analytics" className="space-y-4">
+                <AnalyticsTab />
+              </TabsContent>
+            </>
+          )}
 
           <TabsContent value="log" className="space-y-4">
             <LogTab currentUser={currentUser} />

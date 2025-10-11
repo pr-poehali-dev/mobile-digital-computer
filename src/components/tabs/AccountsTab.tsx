@@ -226,6 +226,15 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
       return;
     }
 
+    if (user.frozen && user.frozenBySystem) {
+      toast({
+        title: 'Невозможно разморозить',
+        description: 'Этот диспетчер заморожен системой из-за отключения диспетчерской системы. Сначала включите диспетчерскую систему.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     setFreezeDialog({ 
       open: true, 
       user, 

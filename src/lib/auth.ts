@@ -6,6 +6,7 @@ export interface User {
   frozen?: boolean;
   frozenBy?: string;
   frozenAt?: string;
+  frozenBySystem?: boolean;
 }
 
 const USERS_DB = [
@@ -78,6 +79,12 @@ export const authenticate = async (userId: string, password: string): Promise<{ 
   const { password: _, ...userData } = userWithPassword;
   
   if (userData.frozen) {
+    if (userData.frozenBySystem && userData.role === 'dispatcher') {
+      return {
+        success: false,
+        error: 'Диспетчерская система временно отключена менеджером. Доступ ограничен.'
+      };
+    }
     return {
       success: false,
       error: 'Ваш аккаунт заморожен. Обратитесь к менеджеру или руководителю.'
