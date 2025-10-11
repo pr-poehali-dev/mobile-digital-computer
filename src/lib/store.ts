@@ -307,13 +307,19 @@ const broadcastChannel = typeof BroadcastChannel !== 'undefined'
 export const addOnlineUser = (user: User): void => {
   const onlineKey = 'mdc_online_users';
   const online = getOnlineUsers();
+  console.log('addOnlineUser called with:', user);
+  console.log('Current online users:', online);
   const exists = online.find(u => u.id === user.id);
   if (!exists) {
-    localStorage.setItem(onlineKey, JSON.stringify([...online, user]));
+    const updated = [...online, user];
+    localStorage.setItem(onlineKey, JSON.stringify(updated));
     localStorage.setItem('mdc_online_users_timestamp', Date.now().toString());
     console.log('User went online:', user.fullName);
+    console.log('Updated online users:', updated);
     window.dispatchEvent(new CustomEvent('online_users_changed'));
     broadcastChannel?.postMessage({ type: 'online_users_changed' });
+  } else {
+    console.log('User already online:', user.fullName);
   }
 };
 
