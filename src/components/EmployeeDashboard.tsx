@@ -262,19 +262,28 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
 
       <main className="container mx-auto px-4 py-8">
         {mdtSystemDisabled ? (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center justify-center py-20">
-                <Icon name="ShieldAlert" size={64} className="text-destructive mb-4 opacity-50" />
-                <h3 className="text-2xl font-semibold mb-2">МДТ система отключена</h3>
-                <p className="text-muted-foreground text-center mb-6">
-                  Менеджер временно отключил МДТ систему.<br />
-                  Управление экипажами, вызовами и аналитикой недоступно.<br />
-                  Вступление на дежурство заблокировано.
-                </p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex flex-col items-center justify-center py-20">
+                    <Icon name="ShieldAlert" size={64} className="text-destructive mb-4 opacity-50" />
+                    <h3 className="text-2xl font-semibold mb-2">МДТ система отключена</h3>
+                    <p className="text-muted-foreground text-center mb-6">
+                      Менеджер временно отключил МДТ систему.<br />
+                      Управление экипажами, вызовами и аналитикой недоступно.<br />
+                      Вступление на дежурство заблокировано.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            {survSystemEnabled && (
+              <div className="lg:col-span-1">
+                <ShiftControls currentUser={currentUser} />
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1 space-y-6">
