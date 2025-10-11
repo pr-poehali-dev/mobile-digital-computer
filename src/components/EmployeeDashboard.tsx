@@ -76,6 +76,8 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
     setAvailableUsers(getAvailableCrewMembers());
   };
 
+  console.log('[EmployeeDashboard] Компонент монтируется, currentUser:', currentUser);
+  
   useSync(['dispatcher_shift_changed', 'crews_updated', 'calls_updated'], loadData, 2000);
   useSync(['online_users_changed'], loadAvailableUsers, 2000);
 
