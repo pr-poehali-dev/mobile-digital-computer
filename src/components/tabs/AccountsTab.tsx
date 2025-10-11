@@ -41,6 +41,9 @@ const getRoleBadgeVariant = (role: string) => {
 
 const AccountsTab = ({ currentUser }: AccountsTabProps) => {
   const [users, setUsers] = useState<User[]>([]);
+  const [sortBy, setSortBy] = useState<'id' | 'name' | 'role' | 'status'>('id');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [viewMode, setViewMode] = useState<'all' | 'frozen'>('all');
   const [editDialog, setEditDialog] = useState<{ open: boolean; user: User | null }>({ open: false, user: null });
   const [createDialog, setCreateDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; userId: string | null }>({ open: false, userId: null });
@@ -274,8 +277,155 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
     return false;
   };
 
+  const handleSort = (field: 'id' | 'name' | 'role' | 'status') => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const getSortedAndFilteredUsers = () => {
+    const filteredUsers = viewMode === 'frozen' 
+      ? users.filter(u => u.frozen) 
+      : users;
+
+    const sorted = [...filteredUsers].sort((a, b) => {
+      let aValue: string | number = '';
+      let bValue: string | number = '';
+
+      switch (sortBy) {
+        case 'id':
+          aValue = a.id;
+          bValue = b.id;
+          break;
+        case 'name':
+          aValue = a.fullName.toLowerCase();
+          bValue = b.fullName.toLowerCase();
+          break;
+        case 'role':
+          aValue = a.role;
+          bValue = b.role;
+          break;
+        case 'status':
+          aValue = a.frozen ? 1 : 0;
+          bValue = b.frozen ? 1 : 0;
+          break;
+      }
+
+      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return sorted;
+  };
+
+  const sortedUsers = getSortedAndFilteredUsers();
+  const frozenCount = users.filter(u => u.frozen).length;
+
+  const activeCount = users.filter(u => !u.frozen).length;
+  const managerCount = users.filter(u => u.role === 'manager').length;
+  const supervisorCount = users.filter(u => u.role === 'supervisor').length;
+  const dispatcherCount = users.filter(u => u.role === 'dispatcher').length;
+  const employeeCount = users.filter(u => u.role === 'employee').length;
+
   return (
     <div className="space-y-6">
+      {viewMode === 'all' && (
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Icon name="Users" size={20} className="text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Всего</p>
+                  <p className="text-2xl font-bold">{users.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
+                  <Icon name="CheckCircle" size={20} className="text-success" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Активных</p>
+                  <p className="text-2xl font-bold">{activeCount}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card 
+            className="cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => frozenCount > 0 && setViewMode('frozen')}
+          >
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <Icon name="Snowflake" size={20} className="text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Замороженных</p>
+                  <p className="text-2xl font-bold">{frozenCount}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                  <Icon name="Shield" size={20} className="text-orange-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Управление</p>
+                  <p className="text-2xl font-bold">{managerCount + supervisorCount}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                  <Icon name="UserCheck" size={20} className="text-purple-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Персонал</p>
+                  <p className="text-2xl font-bold">{dispatcherCount + employeeCount}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      
+      {viewMode === 'frozen' && frozenCount > 0 && (
+        <Card className="border-blue-500 bg-blue-50">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <Icon name="Info" size={20} className="text-blue-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-blue-900">Режим просмотра замороженных аккаунтов</h3>
+                <p className="text-sm text-blue-700 mt-1">
+                  Отображаются только заблокированные аккаунты ({frozenCount} из {users.length}). Эти пользователи не могут войти в систему до разморозки.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -289,7 +439,50 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Button
+                variant={viewMode === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('all')}
+              >
+                <Icon name="Users" size={16} className="mr-2" />
+                Все аккаунты ({users.length})
+              </Button>
+              <Button
+                variant={viewMode === 'frozen' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('frozen')}
+              >
+                <Icon name="Snowflake" size={16} className="mr-2" />
+                Замороженные ({frozenCount})
+              </Button>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Label className="text-sm text-muted-foreground">Сортировка:</Label>
+              <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="id">По ID</SelectItem>
+                  <SelectItem value="name">По имени</SelectItem>
+                  <SelectItem value="role">По роли</SelectItem>
+                  <SelectItem value="status">По статусу</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              >
+                <Icon name={sortOrder === 'asc' ? 'ArrowUp' : 'ArrowDown'} size={16} />
+              </Button>
+            </div>
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -298,11 +491,19 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
                 <TableHead>Роль</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Статус</TableHead>
+                {viewMode === 'frozen' && <TableHead>Информация о заморозке</TableHead>}
                 <TableHead className="text-right">Действия</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
+              {sortedUsers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={viewMode === 'frozen' ? 7 : 6} className="text-center py-8 text-muted-foreground">
+                    {viewMode === 'frozen' ? 'Нет замороженных аккаунтов' : 'Нет пользователей'}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                sortedUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>
                     <Badge variant="secondary" className="font-mono">#{user.id}</Badge>
@@ -327,6 +528,28 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
                       </Badge>
                     )}
                   </TableCell>
+                  {viewMode === 'frozen' && (
+                    <TableCell>
+                      {user.frozen && user.frozenAt && (
+                        <div className="text-sm">
+                          <p className="text-muted-foreground">
+                            {new Date(user.frozenAt).toLocaleDateString('ru-RU', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                          {user.frozenBy && (
+                            <p className="text-xs text-muted-foreground">
+                              ID: {user.frozenBy}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </TableCell>
+                  )}
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       {currentUser && canFreezeUser(currentUser, user) && (
@@ -359,7 +582,8 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
