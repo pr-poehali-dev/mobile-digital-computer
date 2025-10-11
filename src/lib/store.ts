@@ -325,6 +325,41 @@ export const deleteUser = (userId: string): void => {
   saveAllUsers(users.filter(u => u.id !== userId));
 };
 
+export const changeUserId = (oldUserId: string, newUserId: string): boolean => {
+  const users = getAllUsers();
+  
+  if (users.some(u => u.id === newUserId)) {
+    return false;
+  }
+  
+  const userToUpdate = users.find(u => u.id === oldUserId);
+  if (!userToUpdate) {
+    return false;
+  }
+  
+  const updatedUsers = users.map(u => 
+    u.id === oldUserId ? { ...u, id: newUserId } : u
+  );
+  saveAllUsers(updatedUsers);
+  
+  const usersWithPassword = storage.get<any[]>(KEYS.USERS_PASSWORDS, []);
+  const updatedPasswords = usersWithPassword.map(u => 
+    u.id === oldUserId ? { ...u, id: newUserId } : u
+  );
+  storage.set(KEYS.USERS_PASSWORDS, updatedPasswords);
+  
+  const crews = getCrews();
+  const updatedCrews = crews.map(crew => ({
+    ...crew,
+    members: crew.members.map(memberId => 
+      memberId === oldUserId ? newUserId : memberId
+    )
+  }));
+  saveCrews(updatedCrews);
+  
+  return true;
+};
+
 // ============================================================================
 // CREWS API
 // ============================================================================

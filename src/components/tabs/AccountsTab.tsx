@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Icon from '@/components/ui/icon';
-import { getAllUsers, deleteUser, updateUser, createUser } from '@/lib/store';
+import { getAllUsers, deleteUser, updateUser, createUser, changeUserId } from '@/lib/store';
 import { type User } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -42,6 +42,8 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
   const [editDialog, setEditDialog] = useState<{ open: boolean; user: User | null }>({ open: false, user: null });
   const [createDialog, setCreateDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; userId: string | null }>({ open: false, userId: null });
+  const [changeIdDialog, setChangeIdDialog] = useState<{ open: boolean; user: User | null }>({ open: false, user: null });
+  const [newUserId, setNewUserId] = useState('');
   const [formData, setFormData] = useState({
     userId: '',
     password: '',
@@ -95,6 +97,51 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
         description: `Данные ${formData.fullName} успешно обновлены`,
       });
     }
+  };
+
+  const handleChangeId = (user: User) => {
+    setNewUserId('');
+    setChangeIdDialog({ open: true, user });
+  };
+
+  const handleSaveChangeId = () => {
+    if (!changeIdDialog.user) return;
+
+    if (!newUserId || newUserId.length !== 5 || !/^\d{5}$/.test(newUserId)) {
+      toast({
+        title: 'Ошибка',
+        description: 'ID должен содержать ровно 5 цифр',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const success = changeUserId(changeIdDialog.user.id, newUserId);
+    
+    if (!success) {
+      toast({
+        title: 'Ошибка',
+        description: 'ID уже занят другим пользователем',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const usersData = localStorage.getItem('mdc_users');
+    if (usersData) {
+      const users = JSON.parse(usersData);
+      const updated = users.map((u: any) => 
+        u.id === changeIdDialog.user?.id ? { ...u, id: newUserId } : u
+      );
+      localStorage.setItem('mdc_users', JSON.stringify(updated));
+    }
+
+    loadUsers();
+    setChangeIdDialog({ open: false, user: null });
+    toast({
+      title: 'ID изменен',
+      description: `ID пользователя ${changeIdDialog.user.fullName} успешно изменен на #${newUserId}`,
+    });
   };
 
   const handleSaveCreate = () => {
@@ -237,6 +284,11 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(user)}>
                         <Icon name="Edit" size={16} />
                       </Button>
+                      {(currentUser?.role === 'manager' || currentUser?.role === 'supervisor') && user.id !== currentUser?.id && (
+                        <Button variant="ghost" size="icon" onClick={() => handleChangeId(user)}>
+                          <Icon name="Hash" size={16} />
+                        </Button>
+                      )}
                       <Button 
                         variant="ghost" 
                         size="icon" 
@@ -386,6 +438,49 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
             </Button>
             <Button onClick={handleSaveEdit}>
               Сохранить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={changeIdDialog.open} onOpenChange={(open) => setChangeIdDialog({ open, user: null })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Изменить ID пользователя</DialogTitle>
+            <DialogDescription>
+              Изменение ID для {changeIdDialog.user?.fullName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="currentId">Текущий ID</Label>
+              <Input
+                id="currentId"
+                value={changeIdDialog.user?.id || ''}
+                disabled
+                className="font-mono"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newUserId">Новый ID *</Label>
+              <Input
+                id="newUserId"
+                value={newUserId}
+                onChange={(e) => setNewUserId(e.target.value)}
+                placeholder="Например: 10006"
+                maxLength={5}
+                pattern="[0-9]{5}"
+                className="font-mono"
+              />
+              <p className="text-xs text-muted-foreground">Ровно 5 цифр. Используется для входа в систему</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setChangeIdDialog({ open: false, user: null })}>
+              Отмена
+            </Button>
+            <Button onClick={handleSaveChangeId}>
+              Изменить ID
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -37,7 +37,7 @@ const LogTab = ({ currentUser }: LogTabProps) => {
     type: 'one' 
   });
   const { toast } = useToast();
-  const isManager = currentUser?.role === 'manager';
+  const canManage = currentUser?.role === 'manager' || currentUser?.role === 'supervisor';
 
   const loadLogs = () => {
     setLogs(getActivityLogs());
@@ -96,6 +96,8 @@ const LogTab = ({ currentUser }: LogTabProps) => {
   const allSelected = filteredLogs.length > 0 && selectedLogs.size === filteredLogs.length;
   const someSelected = selectedLogs.size > 0 && selectedLogs.size < filteredLogs.length;
 
+  console.log('LogTab: currentUser =', currentUser, 'canManage =', canManage);
+
   return (
     <div className="space-y-6">
       <Card>
@@ -112,7 +114,7 @@ const LogTab = ({ currentUser }: LogTabProps) => {
                 />
                 <Icon name="Search" size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               </div>
-              {isManager && (
+              {canManage && (
                 <>
                   {selectedLogs.size > 0 && (
                     <Button 
@@ -148,7 +150,7 @@ const LogTab = ({ currentUser }: LogTabProps) => {
             </div>
           ) : (
             <div className="space-y-2">
-              {isManager && (
+              {canManage && (
                 <div className="flex items-center gap-2 p-3 border-b mb-4">
                   <Checkbox
                     checked={allSelected}
@@ -175,7 +177,7 @@ const LogTab = ({ currentUser }: LogTabProps) => {
                     key={log.id}
                     className="flex items-start gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                   >
-                    {isManager && (
+                    {canManage && (
                       <div className="flex-shrink-0 pt-1">
                         <Checkbox
                           checked={selectedLogs.has(log.id)}
@@ -222,7 +224,7 @@ const LogTab = ({ currentUser }: LogTabProps) => {
                             </div>
                           </div>
                         </div>
-                        {isManager && (
+                        {canManage && (
                           <Button
                             variant="ghost"
                             size="icon"
