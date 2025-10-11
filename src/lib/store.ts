@@ -328,13 +328,22 @@ export const changeUserId = (oldUserId: string, newUserId: string): boolean => {
 // CREWS API
 // ============================================================================
 
+let isSyncing = false;
+
 export const syncCrewsFromAPI = async (): Promise<void> => {
+  if (isSyncing) return;
+  
+  isSyncing = true;
   try {
     const units = await fetchUnits();
-    storage.set(KEYS.CREWS, units);
-    syncManager.notify('crews_updated');
+    if (units && units.length >= 0) {
+      storage.set(KEYS.CREWS, units);
+      syncManager.notify('crews_updated');
+    }
   } catch (err) {
     console.error('Error syncing units from API:', err);
+  } finally {
+    isSyncing = false;
   }
 };
 
@@ -358,15 +367,7 @@ export const createCrew = async (unitName: string, members: string[], creatorId?
   const newId = await createUnitAPI(newUnit);
   
   if (newId) {
-    const fullUnit: Crew = {
-      ...newUnit,
-      id: newId,
-      lastUpdate: new Date().toISOString()
-    };
-    
-    const units = storage.get<Crew[]>(KEYS.CREWS, []);
-    storage.set(KEYS.CREWS, [...units, fullUnit]);
-    syncManager.notify('crews_updated');
+    await syncCrewsFromAPI();
     
     if (creatorId) {
       const users = getAllUsers();
@@ -382,7 +383,8 @@ export const createCrew = async (unitName: string, members: string[], creatorId?
       });
     }
     
-    return fullUnit;
+    const crews = getCrews();
+    return crews.find(c => c.id === newId) || null;
   }
   
   return null;
@@ -395,9 +397,7 @@ export const updateCrew = async (crewId: number, unitName: string, members: stri
   if (unit) {
     const updatedUnit = { ...unit, unitName, members, lastUpdate: new Date().toISOString() };
     await updateUnitAPI(updatedUnit);
-    
-    storage.set(KEYS.CREWS, units.map(u => u.id === crewId ? updatedUnit : u));
-    syncManager.notify('crews_updated');
+    await syncCrewsFromAPI();
   }
 };
 
@@ -414,8 +414,7 @@ export const updateCrewStatus = async (crewId: number, status: Crew['status'], l
     };
     
     await updateUnitAPI(updatedUnit);
-    storage.set(KEYS.CREWS, units.map(u => u.id === crewId ? updatedUnit : u));
-    syncManager.notify('crews_updated');
+    await syncCrewsFromAPI();
   }
   
   if (unit && userId) {
@@ -446,8 +445,7 @@ export const deleteCrew = async (crewId: number, userId?: string): Promise<void>
   const success = await deleteUnitAPI(crewId);
   
   if (success) {
-    storage.set(KEYS.CREWS, units.filter(u => u.id !== crewId));
-    syncManager.notify('crews_updated');
+    await syncCrewsFromAPI();
     
     if (unit && userId) {
       const users = getAllUsers();
@@ -664,7 +662,7 @@ const startAutoSync = () => {
   
   autoSyncInterval = setInterval(async () => {
     await syncCrewsFromAPI();
-  }, 3000);
+  }, 5000);
 };
 
 if (typeof window !== 'undefined') {
