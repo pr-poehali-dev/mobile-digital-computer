@@ -280,16 +280,6 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
                       </div>
                     )}
 
-                    {myCrew.status !== 'unavailable' && !myCrew.panicActive && (
-                      <div className="pt-2 border-t">
-                        <PanicButton
-                          crewId={myCrew.id}
-                          userId={currentUser.id}
-                          crewName={myCrew.unitName}
-                        />
-                      </div>
-                    )}
-
                     {myCrew.panicActive && (
                       <div className="p-3 bg-red-100 border-2 border-red-600 rounded-lg">
                         <p className="text-sm font-bold text-red-900">🚨 ТРЕВОГА АКТИВНА</p>
@@ -316,8 +306,16 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
                 )}
               </CardContent>
               {myCrew && !dispatcherOnDuty && (
-                <div className="px-6 pb-4">
-                  <Button onClick={() => setDeleteDialog(true)} variant="destructive" className="w-full">
+                <div className="px-6 pb-4 space-y-2">
+                  {myCrew.status !== 'unavailable' && (
+                    <PanicButton
+                      crewId={myCrew.id}
+                      userId={currentUser.id}
+                      crewName={myCrew.unitName}
+                      disabled={myCrew.panicActive}
+                    />
+                  )}
+                  <Button onClick={() => setDeleteDialog(true)} variant="destructive" className="w-full" size="sm">
                     <Icon name="Trash2" size={16} className="mr-2" />
                     Удалить экипаж
                   </Button>

@@ -222,6 +222,7 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
   const activeCount = crews.filter(
     (c) => c.status === "en-route" || c.status === "on-scene",
   ).length;
+  const panicCount = crews.filter((c) => c.panicActive).length;
   const pendingCalls = calls.filter((c) => c.status === "pending");
 
   return (
@@ -239,7 +240,7 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -270,6 +271,19 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-primary">{activeCount}</div>
+          </CardContent>
+        </Card>
+        <Card className={panicCount > 0 ? 'border-red-600 border-2 bg-red-50' : ''}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Icon name="AlertTriangle" size={16} className={panicCount > 0 ? 'text-red-600' : ''} />
+              Сигналы тревоги
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-3xl font-bold ${panicCount > 0 ? 'text-red-600' : ''}`}>
+              {panicCount}
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -483,6 +483,15 @@ export const activatePanic = (crewId: number, userId: string): void => {
   storage.set(KEYS.CREWS, updatedCrews);
   syncManager.notify('crews_updated');
   
+  const panicCall = createCall({
+    address: crew.location || 'Местоположение неизвестно',
+    type: '🚨 КНОПКА ПАНИКИ',
+    priority: 'urgent',
+    status: 'dispatched',
+    assignedUnit: crew.unitName,
+    assignedCrewId: crewId,
+  });
+  
   addActivityLog({
     type: 'panic_activated',
     userId,

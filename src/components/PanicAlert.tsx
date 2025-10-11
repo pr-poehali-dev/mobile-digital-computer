@@ -14,8 +14,9 @@ interface PanicAlertProps {
 
 const PanicAlert = ({ currentUser }: PanicAlertProps) => {
   const [panicCrews, setPanicCrews] = useState<Crew[]>([]);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioRef = useRef<{ oscillator: OscillatorNode; context: AudioContext; interval: NodeJS.Timeout } | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [blinkingCrews, setBlinkingCrews] = useState<Set<number>>(new Set());
   const { toast } = useToast();
 
   const loadPanicAlerts = () => {
@@ -26,6 +27,16 @@ const PanicAlert = ({ currentUser }: PanicAlertProps) => {
       
       alerts.forEach(crew => {
         if (!panicCrews.find(c => c.id === crew.id)) {
+          setBlinkingCrews(prev => new Set(prev).add(crew.id));
+          
+          setTimeout(() => {
+            setBlinkingCrews(prev => {
+              const next = new Set(prev);
+              next.delete(crew.id);
+              return next;
+            });
+          }, 10000);
+          
           toast({
             title: '🚨 ТРЕВОГА!',
             description: `Экипаж ${crew.unitName} активировал кнопку паники! Местоположение: ${crew.location || 'неизвестно'}`,
@@ -47,7 +58,6 @@ const PanicAlert = ({ currentUser }: PanicAlertProps) => {
 
   const playAlarmSound = () => {
     if (!audioRef.current) {
-      audioRef.current = new Audio();
       const audioContext = new AudioContext();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
@@ -62,20 +72,24 @@ const PanicAlert = ({ currentUser }: PanicAlertProps) => {
       
       let isHigh = true;
       const interval = setInterval(() => {
-        if (audioRef.current) {
-          oscillator.frequency.setValueAtTime(isHigh ? 600 : 800, audioContext.currentTime);
-          isHigh = !isHigh;
-        } else {
-          clearInterval(interval);
-          oscillator.stop();
-        }
-      }, 500);
+        oscillator.frequency.setValueAtTime(isHigh ? 600 : 800, audioContext.currentTime);
+        isHigh = !isHigh;
+      }, 250);
+      
+      audioRef.current = { oscillator, context: audioContext, interval };
+      
+      setTimeout(() => {
+        stopAlarmSound();
+      }, 3000);
     }
     setIsPlaying(true);
   };
 
   const stopAlarmSound = () => {
     if (audioRef.current) {
+      clearInterval(audioRef.current.interval);
+      audioRef.current.oscillator.stop();
+      audioRef.current.context.close();
       audioRef.current = null;
     }
     setIsPlaying(false);
@@ -94,6 +108,11 @@ const PanicAlert = ({ currentUser }: PanicAlertProps) => {
     }
     
     resetPanic(crew.id, currentUser.id);
+    setBlinkingCrews(prev => {
+      const next = new Set(prev);
+      next.delete(crew.id);
+      return next;
+    });
     toast({
       title: 'Тревога сброшена',
       description: `Сигнал тревоги для экипажа ${crew.unitName} сброшен`,
@@ -104,39 +123,45 @@ const PanicAlert = ({ currentUser }: PanicAlertProps) => {
 
   return (
     <div className="fixed top-4 right-4 z-50 space-y-2 max-w-md">
-      {panicCrews.map(crew => (
-        <Card key={crew.id} className="border-red-600 border-2 bg-red-50 animate-pulse">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <Icon name="AlertTriangle" size={32} className="text-red-600 flex-shrink-0" />
-              <div className="flex-1">
-                <h3 className="font-bold text-red-900 text-lg">🚨 ТРЕВОГА!</h3>
-                <p className="text-sm text-red-800 font-semibold mt-1">
-                  Экипаж: {crew.unitName}
-                </p>
-                <p className="text-sm text-red-700 mt-1">
-                  📍 Местоположение: {crew.location || 'неизвестно'}
-                </p>
-                <p className="text-xs text-red-600 mt-1">
-                  Активировано: {crew.panicTriggeredAt ? new Date(crew.panicTriggeredAt).toLocaleTimeString('ru-RU') : ''}
-                </p>
-                
-                {currentUser && canManageAccounts(currentUser) && (
-                  <Button
-                    onClick={() => handleResetPanic(crew)}
-                    size="sm"
-                    variant="outline"
-                    className="mt-3 w-full border-red-600 text-red-700 hover:bg-red-100"
-                  >
-                    <Icon name="XCircle" size={16} className="mr-2" />
-                    Сбросить тревогу
-                  </Button>
-                )}
+      {panicCrews.map(crew => {
+        const isBlinking = blinkingCrews.has(crew.id);
+        return (
+          <Card 
+            key={crew.id} 
+            className={`border-red-600 border-2 bg-red-50 ${isBlinking ? 'animate-pulse' : ''}`}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <Icon name="AlertTriangle" size={32} className="text-red-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <h3 className="font-bold text-red-900 text-lg">🚨 ТРЕВОГА!</h3>
+                  <p className="text-sm text-red-800 font-semibold mt-1">
+                    Экипаж: {crew.unitName}
+                  </p>
+                  <p className="text-sm text-red-700 mt-1">
+                    📍 Местоположение: {crew.location || 'неизвестно'}
+                  </p>
+                  <p className="text-xs text-red-600 mt-1">
+                    Активировано: {crew.panicTriggeredAt ? new Date(crew.panicTriggeredAt).toLocaleTimeString('ru-RU') : ''}
+                  </p>
+                  
+                  {currentUser && canManageAccounts(currentUser) && (
+                    <Button
+                      onClick={() => handleResetPanic(crew)}
+                      size="sm"
+                      variant="outline"
+                      className="mt-3 w-full border-red-600 text-red-700 hover:bg-red-100"
+                    >
+                      <Icon name="XCircle" size={16} className="mr-2" />
+                      Сбросить тревогу
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 };

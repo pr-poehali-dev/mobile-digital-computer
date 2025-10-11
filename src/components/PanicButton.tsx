@@ -32,11 +32,15 @@ const PanicButton = ({ crewId, userId, crewName, disabled }: PanicButtonProps) =
       <Button
         onClick={() => setConfirmOpen(true)}
         disabled={disabled}
-        variant="destructive"
-        size="lg"
-        className="w-full gap-2 bg-red-600 hover:bg-red-700 text-white font-bold animate-pulse"
+        variant={disabled ? "destructive" : "default"}
+        size="sm"
+        className={`w-full gap-2 font-bold ${
+          disabled 
+            ? 'bg-red-600 hover:bg-red-600 cursor-not-allowed' 
+            : 'bg-green-600 hover:bg-green-700 text-white'
+        }`}
       >
-        <Icon name="AlertTriangle" size={24} />
+        <Icon name="AlertTriangle" size={18} />
         КНОПКА ПАНИКИ
       </Button>
 
