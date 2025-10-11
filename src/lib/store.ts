@@ -238,6 +238,12 @@ export const removeOnlineUser = (userId: string): void => {
   localStorage.setItem(onlineKey, JSON.stringify(filtered));
 };
 
+export const getAvailableCrewMembers = (): User[] => {
+  const excludedRoles = ['Диспетчер', 'Менеджер', 'Руководитель'];
+  const onlineUsers = getOnlineUsers();
+  return onlineUsers.filter(u => !excludedRoles.includes(u.role));
+};
+
 export const createCall = (call: Omit<Call, 'id' | 'time' | 'createdAt'>): Call => {
   const calls = getCalls();
   const newId = Math.max(...calls.map(c => parseInt(c.id.split('-')[1])), 1000) + 1;

@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import Icon from '@/components/ui/icon';
-import { getCrews, updateCrewStatus, createCrew, updateCrew, deleteCrew, getOnlineUsers, getAllUsers, type Crew } from '@/lib/store';
+import { getCrews, updateCrewStatus, createCrew, updateCrew, deleteCrew, getAvailableCrewMembers, getAllUsers, type Crew } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 
 const getStatusConfig = (status: Crew['status']) => {
@@ -150,7 +150,7 @@ const CrewsTab = () => {
     }));
   };
 
-  const onlineUsers = getOnlineUsers();
+  const availableUsers = getAvailableCrewMembers();
   const allUsers = getAllUsers();
   const availableCount = crews.filter(c => c.status === 'available').length;
   const activeCount = crews.filter(c => c.status === 'en-route' || c.status === 'on-scene').length;
@@ -160,7 +160,7 @@ const CrewsTab = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Экипажи</h2>
-          <p className="text-sm text-muted-foreground">Онлайн сотрудников: {onlineUsers.length}</p>
+          <p className="text-sm text-muted-foreground">Доступно сотрудников: {availableUsers.length}</p>
         </div>
         <Button onClick={handleCreate}>
           <Icon name="Plus" size={18} className="mr-2" />
@@ -367,12 +367,12 @@ const CrewsTab = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label>Сотрудники (онлайн: {onlineUsers.length}) *</Label>
-              {onlineUsers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Нет онлайн сотрудников</p>
+              <Label>Сотрудники (доступно: {availableUsers.length}) *</Label>
+              {availableUsers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Нет доступных сотрудников для формирования экипажа</p>
               ) : (
                 <div className="border rounded-lg p-3 space-y-2 max-h-60 overflow-y-auto">
-                  {onlineUsers.map(user => (
+                  {availableUsers.map(user => (
                     <div key={user.id} className="flex items-center space-x-2">
                       <Checkbox
                         id={`create-${user.id}`}
@@ -419,12 +419,12 @@ const CrewsTab = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label>Сотрудники (онлайн: {onlineUsers.length}) *</Label>
-              {onlineUsers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Нет онлайн сотрудников</p>
+              <Label>Сотрудники (доступно: {availableUsers.length}) *</Label>
+              {availableUsers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Нет доступных сотрудников для формирования экипажа</p>
               ) : (
                 <div className="border rounded-lg p-3 space-y-2 max-h-60 overflow-y-auto">
-                  {onlineUsers.map(user => (
+                  {availableUsers.map(user => (
                     <div key={user.id} className="flex items-center space-x-2">
                       <Checkbox
                         id={`edit-${user.id}`}
