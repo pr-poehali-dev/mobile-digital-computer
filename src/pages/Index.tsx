@@ -46,12 +46,26 @@ const Index = () => {
         }
       };
       
+      // Слушаем события изменения пользователей (для заморозки)
+      const handleUsersUpdate = () => {
+        const usersData = localStorage.getItem('mdc_users');
+        if (usersData) {
+          const users = JSON.parse(usersData);
+          const updatedUser = users.find((u: User) => u.id === currentUser.id);
+          if (updatedUser?.frozen) {
+            handleLogout();
+          }
+        }
+      };
+      
       syncManager.addEventListener('system_lockdown_changed', handleLockdownChange);
+      syncManager.addEventListener('users_updated', handleUsersUpdate);
       
       return () => {
         clearInterval(heartbeatInterval);
         window.removeEventListener('beforeunload', handleBeforeUnload);
         syncManager.removeEventListener('system_lockdown_changed', handleLockdownChange);
+        syncManager.removeEventListener('users_updated', handleUsersUpdate);
         removeOnlineUser(currentUser.id);
       };
     }

@@ -3,6 +3,9 @@ export interface User {
   fullName: string;
   role: 'manager' | 'dispatcher' | 'supervisor' | 'employee';
   email: string;
+  frozen?: boolean;
+  frozenBy?: string;
+  frozenAt?: string;
 }
 
 const USERS_DB = [
@@ -73,6 +76,13 @@ export const authenticate = async (userId: string, password: string): Promise<{ 
   }
 
   const { password: _, ...userData } = userWithPassword;
+  
+  if (userData.frozen) {
+    return {
+      success: false,
+      error: 'Ваш аккаунт заморожен. Обратитесь к менеджеру или руководителю.'
+    };
+  }
   
   const lockdownData = localStorage.getItem('mdc_system_lockdown');
   if (lockdownData) {

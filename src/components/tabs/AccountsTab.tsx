@@ -9,10 +9,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Icon from '@/components/ui/icon';
-import { getAllUsers, deleteUser, updateUser, createUser, changeUserId } from '@/lib/store';
+import { getAllUsers, deleteUser, updateUser, createUser, changeUserId, freezeUser, unfreezeUser } from '@/lib/store';
 import { type User } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { sanitizeName, sanitizeEmail, sanitizeId } from '@/lib/sanitize';
+import { canFreezeUser } from '@/lib/permissions';
 
 interface AccountsTabProps {
   currentUser: User | null;
@@ -43,6 +44,11 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
   const [editDialog, setEditDialog] = useState<{ open: boolean; user: User | null }>({ open: false, user: null });
   const [createDialog, setCreateDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; userId: string | null }>({ open: false, userId: null });
+  const [freezeDialog, setFreezeDialog] = useState<{ open: boolean; user: User | null; action: 'freeze' | 'unfreeze' }>({ 
+    open: false, 
+    user: null, 
+    action: 'freeze' 
+  });
   const [formData, setFormData] = useState({
     userId: '',
     password: '',
@@ -205,6 +211,48 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
     });
   };
 
+  const handleFreezeToggle = (user: User) => {
+    if (!currentUser) return;
+    
+    if (!canFreezeUser(currentUser, user)) {
+      toast({
+        title: 'Недостаточно прав',
+        description: 'Вы можете замораживать только нижестоящих пользователей',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setFreezeDialog({ 
+      open: true, 
+      user, 
+      action: user.frozen ? 'unfreeze' : 'freeze' 
+    });
+  };
+
+  const handleConfirmFreeze = () => {
+    if (!freezeDialog.user || !currentUser) return;
+
+    if (freezeDialog.action === 'freeze') {
+      freezeUser(freezeDialog.user.id, currentUser.id);
+      toast({
+        title: 'Аккаунт заморожен',
+        description: `${freezeDialog.user.fullName} больше не может войти в систему`,
+        variant: 'destructive'
+      });
+    } else {
+      unfreezeUser(freezeDialog.user.id);
+      toast({
+        title: 'Аккаунт разморожен',
+        description: `${freezeDialog.user.fullName} может снова войти в систему`,
+        className: 'bg-success text-white'
+      });
+    }
+
+    loadUsers();
+    setFreezeDialog({ open: false, user: null, action: 'freeze' });
+  };
+
   const canManageUsers = currentUser?.role === 'manager' || currentUser?.role === 'supervisor';
 
   if (!canManageUsers) {
@@ -249,6 +297,7 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
                 <TableHead>Имя и фамилия</TableHead>
                 <TableHead>Роль</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Статус</TableHead>
                 <TableHead className="text-right">Действия</TableHead>
               </TableRow>
             </TableHeader>
@@ -265,8 +314,32 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                  <TableCell>
+                    {user.frozen ? (
+                      <Badge variant="destructive" className="gap-1">
+                        <Icon name="Snowflake" size={12} />
+                        Заморожен
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="gap-1 text-success border-success">
+                        <Icon name="CheckCircle" size={12} />
+                        Активен
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
+                      {currentUser && canFreezeUser(currentUser, user) && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleFreezeToggle(user)}
+                          disabled={user.id === currentUser?.id}
+                          title={user.frozen ? 'Разморозить аккаунт' : 'Заморозить аккаунт'}
+                        >
+                          <Icon name={user.frozen ? "Flame" : "Snowflake"} size={16} className={user.frozen ? "text-orange-500" : "text-blue-500"} />
+                        </Button>
+                      )}
                       <Button 
                         variant="ghost" 
                         size="icon" 
@@ -456,6 +529,39 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
             <AlertDialogCancel>Отмена</AlertDialogCancel>
             <AlertDialogAction onClick={() => deleteDialog.userId && handleDelete(deleteDialog.userId)}>
               Удалить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={freezeDialog.open} onOpenChange={(open) => setFreezeDialog({ open, user: null, action: 'freeze' })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Icon name={freezeDialog.action === 'freeze' ? 'Snowflake' : 'Flame'} size={24} className={freezeDialog.action === 'freeze' ? 'text-blue-500' : 'text-orange-500'} />
+              {freezeDialog.action === 'freeze' ? 'Заморозить аккаунт?' : 'Разморозить аккаунт?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {freezeDialog.action === 'freeze' ? (
+                <>
+                  Пользователь <strong>{freezeDialog.user?.fullName}</strong> будет немедленно выведен из системы и не сможет войти обратно до разморозки аккаунта.
+                  <br /><br />
+                  <strong>Внимание:</strong> Используйте эту функцию для временной блокировки доступа пользователя.
+                </>
+              ) : (
+                <>
+                  Пользователь <strong>{freezeDialog.user?.fullName}</strong> снова сможет войти в систему.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmFreeze}
+              className={freezeDialog.action === 'freeze' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-orange-600 hover:bg-orange-700'}
+            >
+              {freezeDialog.action === 'freeze' ? 'Заморозить' : 'Разморозить'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

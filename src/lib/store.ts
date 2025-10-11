@@ -390,6 +390,44 @@ export const updateUser = (userId: string, updates: Partial<User>): void => {
   saveAllUsers(users.map(u => u.id === userId ? { ...u, ...sanitizedUpdates } : u));
 };
 
+export const freezeUser = (userId: string, frozenBy: string): void => {
+  const users = getAllUsers();
+  const updatedUsers = users.map(u => 
+    u.id === userId 
+      ? { ...u, frozen: true, frozenBy, frozenAt: new Date().toISOString() } 
+      : u
+  );
+  saveAllUsers(updatedUsers);
+  
+  const usersWithPassword = storage.get<any[]>(KEYS.USERS_PASSWORDS, []);
+  const updatedPasswords = usersWithPassword.map(u => 
+    u.id === userId 
+      ? { ...u, frozen: true, frozenBy, frozenAt: new Date().toISOString() } 
+      : u
+  );
+  storage.set(KEYS.USERS_PASSWORDS, updatedPasswords);
+  
+  removeOnlineUser(userId);
+};
+
+export const unfreezeUser = (userId: string): void => {
+  const users = getAllUsers();
+  const updatedUsers = users.map(u => 
+    u.id === userId 
+      ? { ...u, frozen: false, frozenBy: undefined, frozenAt: undefined } 
+      : u
+  );
+  saveAllUsers(updatedUsers);
+  
+  const usersWithPassword = storage.get<any[]>(KEYS.USERS_PASSWORDS, []);
+  const updatedPasswords = usersWithPassword.map(u => 
+    u.id === userId 
+      ? { ...u, frozen: false, frozenBy: undefined, frozenAt: undefined } 
+      : u
+  );
+  storage.set(KEYS.USERS_PASSWORDS, updatedPasswords);
+};
+
 export const deleteUser = (userId: string): void => {
   const users = getAllUsers();
   saveAllUsers(users.filter(u => u.id !== userId));
