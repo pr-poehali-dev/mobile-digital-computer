@@ -53,7 +53,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<ReturnType<typeof getAvailableCrewMembers>>([]);
   const [crewFormData, setCrewFormData] = useState({ unitName: '', members: [] as string[] });
-  const [dispatchSystemDisabled, setDispatchSystemDisabled] = useState(false);
+  const [mdtSystemDisabled, setMdtSystemDisabled] = useState(false);
   const { toast } = useToast();
 
   const loadData = () => {
@@ -74,9 +74,9 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
     setDispatcherShifts(getActiveDispatcherShifts());
     
     const restrictions = getSystemRestrictions();
-    setDispatchSystemDisabled(restrictions.dispatcherSystemDisabled);
+    setMdtSystemDisabled(restrictions.mdtSystemDisabled);
     
-    if (restrictions.dispatcherSystemDisabled && (activeTab === 'calls' || activeTab === 'analytics')) {
+    if (restrictions.mdtSystemDisabled && (activeTab === 'calls' || activeTab === 'analytics')) {
       setActiveTab('logs');
     }
     
@@ -254,15 +254,16 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {dispatchSystemDisabled ? (
+        {mdtSystemDisabled ? (
           <Card>
             <CardContent className="pt-6">
               <div className="flex flex-col items-center justify-center py-20">
-                <Icon name="ShieldAlert" size={64} className="text-warning mb-4 opacity-50" />
-                <h3 className="text-2xl font-semibold mb-2">Диспетчерская система отключена</h3>
+                <Icon name="ShieldAlert" size={64} className="text-destructive mb-4 opacity-50" />
+                <h3 className="text-2xl font-semibold mb-2">МДТ система отключена</h3>
                 <p className="text-muted-foreground text-center mb-6">
-                  Менеджер временно отключил диспетчерскую систему.<br />
-                  Управление экипажами и вызовами недоступно.
+                  Менеджер временно отключил МДТ систему.<br />
+                  Управление экипажами, вызовами и аналитикой недоступно.<br />
+                  Вступление на дежурство заблокировано.
                 </p>
               </div>
             </CardContent>

@@ -29,7 +29,7 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
   const [profileOpen, setProfileOpen] = useState(false);
   const [isOnDuty, setIsOnDuty] = useState(false);
   const [activeDispatchers, setActiveDispatchers] = useState(0);
-  const [dispatchSystemDisabled, setDispatchSystemDisabled] = useState(false);
+  const [mdtSystemDisabled, setMdtSystemDisabled] = useState(false);
   const { toast } = useToast();
 
   const updateStatus = () => {
@@ -38,9 +38,9 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
       setActiveDispatchers(getActiveDispatcherShifts().length);
     }
     const restrictions = getSystemRestrictions();
-    setDispatchSystemDisabled(restrictions.dispatcherSystemDisabled);
+    setMdtSystemDisabled(restrictions.mdtSystemDisabled);
     
-    if (restrictions.dispatcherSystemDisabled && (activeTab === 'crews' || activeTab === 'calls' || activeTab === 'analytics')) {
+    if (restrictions.mdtSystemDisabled && (activeTab === 'crews' || activeTab === 'calls' || activeTab === 'analytics')) {
       setActiveTab('log');
     }
   };
@@ -186,8 +186,8 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
 
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${canManageAccounts(currentUser) && !dispatchSystemDisabled ? 'grid-cols-6' : dispatchSystemDisabled ? 'grid-cols-3' : 'grid-cols-5'} lg:w-auto lg:inline-grid`}>
-            {!dispatchSystemDisabled && (
+          <TabsList className={`grid w-full ${canManageAccounts(currentUser) && !mdtSystemDisabled ? 'grid-cols-6' : mdtSystemDisabled ? 'grid-cols-3' : 'grid-cols-5'} lg:w-auto lg:inline-grid`}>
+            {!mdtSystemDisabled && (
               <>
                 <TabsTrigger value="crews" className="space-x-2">
                   <Icon name="Users" size={16} />
@@ -219,7 +219,7 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
             </TabsTrigger>
           </TabsList>
 
-          {!dispatchSystemDisabled && (
+          {!mdtSystemDisabled && (
             <>
               <TabsContent value="crews" className="space-y-4">
                 {currentUser?.role === 'dispatcher' && !isOnDuty ? (

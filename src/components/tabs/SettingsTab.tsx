@@ -25,6 +25,7 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
   const [dispatcherSystemDisabled, setDispatcherSystemDisabled] = useState(false);
   const [signal100Disabled, setSignal100Disabled] = useState(false);
   const [panicButtonDisabled, setPanicButtonDisabled] = useState(false);
+  const [mdtSystemDisabled, setMdtSystemDisabled] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -38,6 +39,7 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
     setDispatcherSystemDisabled(restrictions.dispatcherSystemDisabled);
     setSignal100Disabled(restrictions.signal100Disabled);
     setPanicButtonDisabled(restrictions.panicButtonDisabled);
+    setMdtSystemDisabled(restrictions.mdtSystemDisabled);
   }, [currentUser]);
 
   useSync(['system_lockdown_changed', 'user_settings_changed', 'system_restrictions_changed'], () => {
@@ -52,6 +54,7 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
     setDispatcherSystemDisabled(restrictions.dispatcherSystemDisabled);
     setSignal100Disabled(restrictions.signal100Disabled);
     setPanicButtonDisabled(restrictions.panicButtonDisabled);
+    setMdtSystemDisabled(restrictions.mdtSystemDisabled);
   }, 1000);
 
   const handleSoundToggle = (checked: boolean) => {
@@ -104,10 +107,21 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
   const handleDispatcherSystemToggle = (checked: boolean) => {
     updateSystemRestrictions({ dispatcherSystemDisabled: checked });
     toast({
-      title: checked ? 'Диспетчерская система отключена' : 'Диспетчерская система включена',
+      title: checked ? 'Система диспетчеров отключена' : 'Система диспетчеров включена',
       description: checked 
-        ? 'Все разделы скрыты. Диспетчеры заморожены и сняты с дежурства. Сотрудники не видят экипажи и вызовы.'
-        : 'Диспетчерская система восстановлена. Диспетчеры разморожены.',
+        ? 'Все диспетчеры сняты с дежурства. Заступить на дежурство невозможно.'
+        : 'Диспетчеры могут заступать на дежурство',
+      variant: checked ? 'destructive' : 'default'
+    });
+  };
+
+  const handleMdtSystemToggle = (checked: boolean) => {
+    updateSystemRestrictions({ mdtSystemDisabled: checked });
+    toast({
+      title: checked ? 'МДТ система полностью отключена' : 'МДТ система включена',
+      description: checked 
+        ? 'Все разделы диспетчерской системы скрыты. Диспетчеры заморожены. Экипажи, вызовы и аналитика недоступны.'
+        : 'МДТ система восстановлена. Все разделы доступны. Диспетчеры разморожены.',
       variant: checked ? 'destructive' : 'default'
     });
   };
@@ -293,6 +307,43 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
             </CardContent>
           </Card>
 
+          <Card className="border-destructive">
+            <CardHeader>
+              <CardTitle className="text-destructive">Отключение МДТ системы</CardTitle>
+              <CardDescription>Полное отключение всех функций диспетчерской системы для всех пользователей</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                <div className="space-y-1">
+                  <Label className="text-base font-semibold">
+                    МДТ система (полное отключение)
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {mdtSystemDisabled 
+                      ? '🔴 Система полностью отключена. Все разделы (экипажи, вызовы, аналитика, вступление на дежурство) скрыты. Диспетчеры заморожены.'
+                      : '✅ Система работает. Все функции МДТ доступны.'
+                    }
+                  </p>
+                </div>
+                <Switch 
+                  checked={mdtSystemDisabled} 
+                  onCheckedChange={handleMdtSystemToggle}
+                  className="data-[state=checked]:bg-destructive"
+                />
+              </div>
+
+              {mdtSystemDisabled && (
+                <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <Icon name="ShieldAlert" size={20} className="text-destructive mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-semibold text-destructive">МДТ система полностью отключена</p>
+                    <p className="text-muted-foreground">Все диспетчеры заморожены и не могут войти в систему. Все разделы диспетчерской системы скрыты для всех пользователей до включения системы.</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card className="border-warning">
             <CardHeader>
               <CardTitle className="text-warning">Системные ограничения</CardTitle>
@@ -302,12 +353,12 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
               <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
                 <div className="space-y-1">
                   <Label className="text-base font-semibold">
-                    Диспетчерская система
+                    Система диспетчеров
                   </Label>
                   <p className="text-sm text-muted-foreground">
                     {dispatcherSystemDisabled 
-                      ? 'Система отключена. Разделы экипажей, вызовов и аналитики скрыты. Диспетчеры заморожены.'
-                      : 'Система работает. Все пользователи видят разделы диспетчерской системы.'
+                      ? 'Заступить на дежурство невозможно. Все диспетчеры сняты.'
+                      : 'Диспетчеры могут заступать на дежурство'
                     }
                   </p>
                 </div>
@@ -315,6 +366,7 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
                   checked={dispatcherSystemDisabled} 
                   onCheckedChange={handleDispatcherSystemToggle}
                   className="data-[state=checked]:bg-warning"
+                  disabled={mdtSystemDisabled}
                 />
               </div>
 
@@ -334,6 +386,7 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
                   checked={signal100Disabled} 
                   onCheckedChange={handleSignal100Toggle}
                   className="data-[state=checked]:bg-warning"
+                  disabled={mdtSystemDisabled}
                 />
               </div>
 
@@ -353,10 +406,11 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
                   checked={panicButtonDisabled} 
                   onCheckedChange={handlePanicButtonToggle}
                   className="data-[state=checked]:bg-warning"
+                  disabled={mdtSystemDisabled}
                 />
               </div>
 
-              {(dispatcherSystemDisabled || signal100Disabled || panicButtonDisabled) && (
+              {!mdtSystemDisabled && (dispatcherSystemDisabled || signal100Disabled || panicButtonDisabled) && (
                 <div className="flex items-start gap-2 p-3 bg-warning/10 border border-warning/20 rounded-lg">
                   <Icon name="ShieldAlert" size={20} className="text-warning mt-0.5" />
                   <div className="text-sm">

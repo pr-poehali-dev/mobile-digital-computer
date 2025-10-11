@@ -92,6 +92,7 @@ export interface SystemRestrictions {
   dispatcherSystemDisabled: boolean;
   signal100Disabled: boolean;
   panicButtonDisabled: boolean;
+  mdtSystemDisabled: boolean;
 }
 
 // ============================================================================
@@ -1114,7 +1115,8 @@ export const getSystemRestrictions = (): SystemRestrictions => {
   return storage.get<SystemRestrictions>(KEYS.SYSTEM_RESTRICTIONS, {
     dispatcherSystemDisabled: false,
     signal100Disabled: false,
-    panicButtonDisabled: false
+    panicButtonDisabled: false,
+    mdtSystemDisabled: false
   });
 };
 
@@ -1124,11 +1126,18 @@ export const updateSystemRestrictions = (restrictions: Partial<SystemRestriction
   storage.set(KEYS.SYSTEM_RESTRICTIONS, updated);
   syncManager.notify('system_restrictions_changed', updated);
   
-  if (restrictions.dispatcherSystemDisabled !== undefined) {
+  if (restrictions.dispatcherSystemDisabled) {
+    const shifts = storage.get<DispatcherShift[]>(KEYS.DISPATCHER_SHIFTS, []);
+    const activeShifts = shifts.filter(s => s.isActive);
+    activeShifts.forEach(shift => {
+      endDispatcherShift(shift.dispatcherId);
+    });
+  }
+  
+  if (restrictions.mdtSystemDisabled !== undefined) {
     const users = getAllUsers();
-    const dispatchers = users.filter(u => u.role === 'dispatcher');
     
-    if (restrictions.dispatcherSystemDisabled) {
+    if (restrictions.mdtSystemDisabled) {
       const shifts = storage.get<DispatcherShift[]>(KEYS.DISPATCHER_SHIFTS, []);
       const activeShifts = shifts.filter(s => s.isActive);
       activeShifts.forEach(shift => {
@@ -1180,6 +1189,10 @@ export const isSignal100Disabled = (): boolean => {
 
 export const isPanicButtonDisabled = (): boolean => {
   return getSystemRestrictions().panicButtonDisabled;
+};
+
+export const isMdtSystemDisabled = (): boolean => {
+  return getSystemRestrictions().mdtSystemDisabled;
 };
 
 // ============================================================================
