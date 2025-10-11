@@ -22,7 +22,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'Access-Control-Allow-Headers': 'Content-Type, X-User-Id',
                 'Access-Control-Max-Age': '86400'
             },
-            'body': ''
+            'body': '',
+            'isBase64Encoded': False
         }
     
     dsn = os.environ.get('DATABASE_URL')
@@ -57,7 +58,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             return {
                 'statusCode': 200,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({'units': units})
+                'body': json.dumps({'units': units}),
+                'isBase64Encoded': False
             }
         
         elif method == 'POST':
@@ -78,7 +80,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             return {
                 'statusCode': 201,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({'id': unit_id, 'message': 'Юнит создан'})
+                'body': json.dumps({'id': unit_id, 'message': 'Юнит создан'}),
+                'isBase64Encoded': False
             }
         
         elif method == 'PUT':
@@ -102,7 +105,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             return {
                 'statusCode': 200,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({'message': 'Юнит обновлён'})
+                'body': json.dumps({'message': 'Юнит обновлён'}),
+                'isBase64Encoded': False
             }
         
         elif method == 'DELETE':
@@ -115,7 +119,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             return {
                 'statusCode': 200,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({'message': 'Юнит удалён'})
+                'body': json.dumps({'message': 'Юнит удалён'}),
+                'isBase64Encoded': False
             }
     
     finally:
@@ -125,5 +130,6 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     return {
         'statusCode': 405,
         'headers': {'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'error': 'Метод не поддерживается'})
+        'body': json.dumps({'error': 'Метод не поддерживается'}),
+        'isBase64Encoded': False
     }
