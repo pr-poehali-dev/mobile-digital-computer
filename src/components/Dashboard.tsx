@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import Icon from '@/components/ui/icon';
 import CrewsTab from './tabs/CrewsTab';
 import CallsTab from './tabs/CallsTab';
@@ -7,7 +9,11 @@ import AnalyticsTab from './tabs/AnalyticsTab';
 import LogTab from './tabs/LogTab';
 import SettingsTab from './tabs/SettingsTab';
 
-const Dashboard = () => {
+interface DashboardProps {
+  onLogout: () => void;
+}
+
+const Dashboard = ({ onLogout }: DashboardProps) => {
   const [activeTab, setActiveTab] = useState('crews');
 
   return (
@@ -29,9 +35,28 @@ const Dashboard = () => {
                 <p className="text-sm font-medium text-sidebar-foreground">Диспетчер</p>
                 <p className="text-xs text-sidebar-foreground/70">ID: 10245</p>
               </div>
-              <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
-                <Icon name="User" size={20} className="text-primary" />
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 bg-primary/20">
+                    <Icon name="User" size={20} className="text-primary" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem>
+                    <Icon name="User" size={16} className="mr-2" />
+                    Профиль
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Icon name="Settings" size={16} className="mr-2" />
+                    Настройки
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onLogout} className="text-destructive">
+                    <Icon name="LogOut" size={16} className="mr-2" />
+                    Выйти
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
