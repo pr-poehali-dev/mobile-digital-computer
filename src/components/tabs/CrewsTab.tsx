@@ -216,6 +216,7 @@ const CrewsTab = () => {
       unitName: "",
       members: [],
     });
+    loadAvailableUsers();
     setCreateDialog(true);
   };
 

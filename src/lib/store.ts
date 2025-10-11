@@ -372,6 +372,7 @@ export const getAvailableCrewMembers = (): User[] => {
 
 export const startDispatcherShift = (dispatcher: User): void => {
   const shifts = getActiveDispatcherShifts();
+  console.log('startDispatcherShift - current shifts:', shifts);
   const newShift: DispatcherShift = {
     dispatcherId: dispatcher.id,
     dispatcherName: dispatcher.fullName,
@@ -379,11 +380,13 @@ export const startDispatcherShift = (dispatcher: User): void => {
     isActive: true
   };
   const alreadyOnDuty = shifts.find(s => s.dispatcherId === dispatcher.id);
+  console.log('startDispatcherShift - already on duty?', alreadyOnDuty);
   if (!alreadyOnDuty) {
     shifts.push(newShift);
     localStorage.setItem(DISPATCHER_SHIFTS_KEY, JSON.stringify(shifts));
     localStorage.setItem('mdc_dispatcher_shifts_timestamp', Date.now().toString());
-    console.log('Dispatcher shift started:', dispatcher.fullName);
+    console.log('Dispatcher shift started:', dispatcher.fullName, 'Total shifts:', shifts.length);
+    console.log('Stored in localStorage:', localStorage.getItem(DISPATCHER_SHIFTS_KEY));
     window.dispatchEvent(new CustomEvent('dispatcher_shift_changed'));
     broadcastChannel?.postMessage({ type: 'dispatcher_shift_changed' });
   }
