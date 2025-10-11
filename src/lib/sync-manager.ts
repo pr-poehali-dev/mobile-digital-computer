@@ -20,6 +20,7 @@ class SyncManager {
     
     this.channel.addEventListener('message', (event) => {
       const eventType = event.data.type as SyncEventType;
+      console.log('[SyncManager] Получено сообщение из другой вкладки:', eventType, event.data);
       this.triggerLocalListeners(eventType);
     });
   }
@@ -28,6 +29,7 @@ class SyncManager {
    * Уведомить все вкладки и компоненты о событии
    */
   notify(eventType: SyncEventType): void {
+    console.log('[SyncManager] notify вызван:', eventType);
     this.channel.postMessage({ type: eventType, timestamp: Date.now() });
     this.triggerLocalListeners(eventType);
   }
