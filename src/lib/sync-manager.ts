@@ -1,6 +1,5 @@
 /**
- * Глобальный менеджер синхронизации между вкладками и компонентами
- * Использует BroadcastChannel для синхронизации между вкладками браузера
+ * Простой менеджер синхронизации между вкладками через localStorage
  */
 
 type SyncEventType = 
@@ -12,29 +11,19 @@ type SyncEventType =
   | 'activity_log_updated';
 
 class SyncManager {
-  private channel: BroadcastChannel;
   private listeners = new Map<SyncEventType, Set<() => void>>();
+  private lastSync = new Map<string, number>();
 
   constructor() {
-    this.channel = new BroadcastChannel('mdc_sync_channel');
-    
-    this.channel.addEventListener('message', (event) => {
-      const eventType = event.data.type as SyncEventType;
-      console.log('[SyncManager] Получено сообщение из другой вкладки:', eventType, event.data);
-      this.triggerLocalListeners(eventType);
-    });
-
-    // Резервный механизм через storage events
+    // Слушаем изменения localStorage от других вкладок
     window.addEventListener('storage', (event) => {
-      if (event.key && event.key.startsWith('mdc_sync_')) {
-        const eventType = event.key.replace('mdc_sync_', '') as SyncEventType;
-        console.log('[SyncManager] Обнаружено изменение через storage:', eventType);
-        this.triggerLocalListeners(eventType);
-      } else if (event.key && event.key.startsWith('mdc_crews')) {
-        console.log('[SyncManager] Прямое изменение mdc_crews');
+      if (event.key?.startsWith('mdc_') && !event.key.includes('_sync_ts_')) {
+        // При любом изменении данных обновляем все компоненты
         this.triggerLocalListeners('crews_updated');
-      } else if (event.key && event.key.startsWith('mdc_calls')) {
         this.triggerLocalListeners('calls_updated');
+        this.triggerLocalListeners('dispatcher_shift_changed');
+        this.triggerLocalListeners('online_users_changed');
+        this.triggerLocalListeners('activity_log_updated');
       }
     });
   }
@@ -43,13 +32,8 @@ class SyncManager {
    * Уведомить все вкладки и компоненты о событии
    */
   notify(eventType: SyncEventType): void {
-    console.log('[SyncManager] notify вызван:', eventType);
-    this.channel.postMessage({ type: eventType, timestamp: Date.now() });
-    
-    // Дополнительно записываем в localStorage для гарантированной синхронизации
-    const syncKey = `mdc_sync_${eventType}`;
-    localStorage.setItem(syncKey, Date.now().toString());
-    
+    // Записываем timestamp для уведомления других вкладок
+    localStorage.setItem(`mdc_sync_ts_${eventType}`, Date.now().toString());
     this.triggerLocalListeners(eventType);
   }
 
@@ -76,13 +60,6 @@ class SyncManager {
     if (listeners) {
       listeners.forEach(callback => callback());
     }
-  }
-
-  /**
-   * Закрыть соединение
-   */
-  close(): void {
-    this.channel.close();
   }
 }
 
