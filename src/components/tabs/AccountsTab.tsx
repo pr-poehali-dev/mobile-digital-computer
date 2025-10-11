@@ -169,17 +169,6 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
       role: formData.role
     });
 
-    const usersData = localStorage.getItem('mdc_users');
-    const users = usersData ? JSON.parse(usersData) : [];
-    users.push({
-      id: formData.userId,
-      password: formData.password,
-      fullName: formData.fullName,
-      email: formData.email,
-      role: formData.role
-    });
-    localStorage.setItem('mdc_users', JSON.stringify(users));
-
     loadUsers();
     setCreateDialog(false);
     toast({
