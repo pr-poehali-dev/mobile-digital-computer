@@ -1,7 +1,7 @@
 """
-Business: Управление онлайн-пользователями и сменами диспетчеров
+Business: Управление онлайн-пользователями, сменами диспетчеров и экипажами
 Args: event с httpMethod, path, body, queryStringParameters
-Returns: HTTP response с данными онлайн-пользователей или смен
+Returns: HTTP response с данными онлайн-пользователей, смен или экипажей
 """
 
 import json

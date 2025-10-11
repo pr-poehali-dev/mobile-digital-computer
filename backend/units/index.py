@@ -7,9 +7,9 @@ from datetime import datetime
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     '''
-    Business: API для управления юнитами (экипажами) и их участниками
+    Business: API для управления экипажами и их участниками
     Args: event с httpMethod, body, queryStringParameters
-    Returns: JSON с данными юнитов
+    Returns: JSON с данными экипажей
     '''
     method: str = event.get('httpMethod', 'GET')
     
