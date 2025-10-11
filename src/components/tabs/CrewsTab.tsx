@@ -93,6 +93,7 @@ const getStatusConfig = (status: Crew["status"]) => {
 const CrewsTab = () => {
   const [crews, setCrews] = useState<Crew[]>([]);
   const [calls, setCalls] = useState<Call[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<ReturnType<typeof getAvailableCrewMembers>>([]);
   const [editDialog, setEditDialog] = useState<{
     open: boolean;
     crew: Crew | null;
@@ -124,6 +125,25 @@ const CrewsTab = () => {
   useEffect(() => {
     loadCrews();
     loadCalls();
+    loadAvailableUsers();
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'mdc_online_users' || e.key === 'mdc_crews') {
+        loadCrews();
+        loadAvailableUsers();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    const interval = setInterval(() => {
+      loadAvailableUsers();
+    }, 2000);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
   }, []);
 
   const loadCrews = () => {
@@ -132,6 +152,10 @@ const CrewsTab = () => {
 
   const loadCalls = () => {
     setCalls(getCalls());
+  };
+
+  const loadAvailableUsers = () => {
+    setAvailableUsers(getAvailableCrewMembers());
   };
 
   const handleEdit = (crew: Crew) => {
@@ -258,7 +282,6 @@ const CrewsTab = () => {
     }));
   };
 
-  const availableUsers = getAvailableCrewMembers();
   const allUsers = getAllUsers();
   const availableCount = crews.filter((c) => c.status === "available").length;
   const activeCount = crews.filter(
