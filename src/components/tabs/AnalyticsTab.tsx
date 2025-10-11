@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
-import { getCalls, getCrews, getAllUsers, getDispatcherStats } from '@/lib/store';
+import { getCalls, getCrews, getAllUsers, getDispatcherStats, isUserOnDuty } from '@/lib/store';
 
 const AnalyticsTab = () => {
   const [calls, setCalls] = useState<ReturnType<typeof getCalls>>([]);
@@ -14,7 +14,9 @@ const AnalyticsTab = () => {
     const loadData = () => {
       setCalls(getCalls());
       setCrews(getCrews());
-      setDispatchers(getAllUsers().filter(u => u.role === 'dispatcher'));
+      const allDispatchers = getAllUsers().filter(u => u.role === 'dispatcher');
+      const onDutyDispatchers = allDispatchers.filter(d => isUserOnDuty(d.id));
+      setDispatchers(onDutyDispatchers);
     };
     loadData();
   }, []);
@@ -120,17 +122,18 @@ const AnalyticsTab = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Статистика диспетчеров</CardTitle>
+            <CardTitle>Статистика диспетчеров на дежурстве</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {dispatchers.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Нет диспетчеров</p>
+              <p className="text-sm text-muted-foreground">Нет диспетчеров на дежурстве</p>
             ) : (
               dispatchers.map((dispatcher) => {
                 const stats = getDispatcherStats(dispatcher.id);
                 const completionRate = stats.totalCalls > 0 
                   ? (stats.completedCalls / stats.totalCalls) * 100 
                   : 0;
+                const maxHourly = Math.max(...stats.hourlyActivity, 1);
                 
                 return (
                   <div key={dispatcher.id} className="border rounded-lg p-4">
@@ -139,6 +142,9 @@ const AnalyticsTab = () => {
                         <span className="font-semibold">{dispatcher.fullName}</span>
                         <Badge variant="outline" className="ml-2 text-xs">
                           ID: {dispatcher.id}
+                        </Badge>
+                        <Badge variant="default" className="ml-2 text-xs bg-success">
+                          На дежурстве
                         </Badge>
                       </div>
                       <span className="text-sm text-success font-medium">
@@ -167,7 +173,28 @@ const AnalyticsTab = () => {
                         <span className="font-medium">{stats.urgentCalls}</span>
                       </div>
                     </div>
-                    <Progress value={completionRate} className="h-2" />
+                    <Progress value={completionRate} className="h-2 mb-3" />
+                    
+                    <div className="mt-4">
+                      <p className="text-xs text-muted-foreground mb-2">Активность по часам:</p>
+                      <div className="flex items-end justify-between h-16 gap-1">
+                        {stats.hourlyActivity.map((value, idx) => (
+                          <div 
+                            key={idx} 
+                            className="flex-1 bg-primary/20 rounded-t hover:bg-primary/40 transition-colors cursor-pointer"
+                            style={{ height: `${value > 0 ? (value / maxHourly) * 100 : 2}%` }}
+                            title={`${idx}:00 - ${value} вызовов`}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                        <span>0</span>
+                        <span>6</span>
+                        <span>12</span>
+                        <span>18</span>
+                        <span>24</span>
+                      </div>
+                    </div>
                   </div>
                 );
               })

@@ -176,15 +176,30 @@ export const saveCalls = (calls: Call[]): void => {
   syncManager.notify('calls_updated');
 };
 
-export const createCall = (call: Omit<Call, 'id' | 'time' | 'createdAt'>): Call => {
+export const createCall = (call: Omit<Call, 'id' | 'time' | 'createdAt'>, creatorId?: string): Call => {
   const calls = getCalls();
   const newId = Math.max(...calls.map(c => parseInt(c.id.split('-')[1])), 1000) + 1;
   const now = new Date();
+  
+  let dispatcherId = call.dispatcherId;
+  let dispatcherName = call.dispatcherName;
+  
+  if (creatorId && !dispatcherId) {
+    const users = getAllUsers();
+    const creator = users.find(u => u.id === creatorId);
+    if (creator && creator.role === 'dispatcher' && isUserOnDuty(creatorId)) {
+      dispatcherId = creatorId;
+      dispatcherName = creator.fullName;
+    }
+  }
+  
   const newCall = {
     ...call,
     id: `C-${newId}`,
     time: now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
-    createdAt: now.toISOString()
+    createdAt: now.toISOString(),
+    dispatcherId,
+    dispatcherName
   };
   saveCalls([newCall, ...calls]);
   return newCall;
@@ -253,8 +268,27 @@ export const assignCrewToCall = (callId: string, crewId: number, dispatcherId?: 
   const call = calls.find(c => c.id === callId);
   
   if (crew && call) {
+    let finalDispatcherId = call.dispatcherId;
+    let finalDispatcherName = call.dispatcherName;
+    
+    if (dispatcherId && !finalDispatcherId) {
+      const users = getAllUsers();
+      const dispatcher = users.find(u => u.id === dispatcherId);
+      if (dispatcher && dispatcher.role === 'dispatcher' && isUserOnDuty(dispatcherId)) {
+        finalDispatcherId = dispatcherId;
+        finalDispatcherName = dispatcher.fullName;
+      }
+    }
+    
     const updated = calls.map(c => 
-      c.id === callId ? { ...c, assignedCrewId: crewId, assignedUnit: crew.unitName, status: 'dispatched' as const } : c
+      c.id === callId ? { 
+        ...c, 
+        assignedCrewId: crewId, 
+        assignedUnit: crew.unitName, 
+        status: 'dispatched' as const,
+        dispatcherId: finalDispatcherId,
+        dispatcherName: finalDispatcherName
+      } : c
     );
     saveCalls(updated);
     updateCrewStatus(crewId, 'en-route');
@@ -878,12 +912,19 @@ export const getDispatcherStats = (dispatcherId: string) => {
   const calls = getCalls();
   const dispatcherCalls = calls.filter(c => c.dispatcherId === dispatcherId);
   
+  const hourlyActivity = Array(24).fill(0);
+  dispatcherCalls.forEach(call => {
+    const hour = new Date(call.createdAt).getHours();
+    hourlyActivity[hour]++;
+  });
+  
   return {
     totalCalls: dispatcherCalls.length,
     completedCalls: dispatcherCalls.filter(c => c.status === 'completed').length,
     activeCalls: dispatcherCalls.filter(c => c.status === 'dispatched').length,
     pendingCalls: dispatcherCalls.filter(c => c.status === 'pending').length,
     urgentCalls: dispatcherCalls.filter(c => c.priority === 'code99').length,
+    hourlyActivity,
   };
 };
 

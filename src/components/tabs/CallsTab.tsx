@@ -104,7 +104,7 @@ const CallsTab = ({ currentUser }: CallsTabProps) => {
   };
 
   const handleDispatcherChange = (callId: string, dispatcherId: string) => {
-    const dispatcher = dispatchers.find(d => d.id === parseInt(dispatcherId));
+    const dispatcher = dispatchers.find(d => d.id === dispatcherId);
     if (dispatcher) {
       updateCallDispatcher(callId, dispatcher.id, dispatcher.fullName);
       loadData();
@@ -126,10 +126,8 @@ const CallsTab = ({ currentUser }: CallsTabProps) => {
     }
 
     const newCall = createCall({
-      ...formData,
-      dispatcherId: currentUser?.id,
-      dispatcherName: currentUser?.fullName
-    });
+      ...formData
+    }, currentUser?.id);
     
     loadData();
     setCreateDialog(false);
@@ -143,7 +141,7 @@ const CallsTab = ({ currentUser }: CallsTabProps) => {
 
   const handleAssignCrew = (crewId: string) => {
     if (assignDialog.callId) {
-      assignCrewToCall(assignDialog.callId, parseInt(crewId));
+      assignCrewToCall(assignDialog.callId, parseInt(crewId), currentUser?.id);
       loadData();
       setAssignDialog({ open: false, callId: null });
       toast({
