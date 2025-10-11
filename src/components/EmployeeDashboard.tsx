@@ -50,8 +50,26 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 5000);
-    return () => clearInterval(interval);
+    const interval = setInterval(loadData, 2000);
+    
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'mdc_dispatcher_shifts') {
+        loadData();
+      }
+    };
+    
+    const handleShiftChange = () => {
+      loadData();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('dispatcher_shift_changed', handleShiftChange);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('dispatcher_shift_changed', handleShiftChange);
+    };
   }, [currentUser]);
 
   useEffect(() => {
@@ -71,8 +89,14 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
       setMyCalls(calls);
     }
     
-    setDispatcherOnDuty(isDispatcherOnDuty());
+    const dispatcherStatus = isDispatcherOnDuty();
+    setDispatcherOnDuty(dispatcherStatus);
     setDispatcherShifts(getActiveDispatcherShifts());
+    
+    if (dispatcherStatus && (createDialog || deleteDialog)) {
+      setCreateDialog(false);
+      setDeleteDialog(false);
+    }
   };
 
   const loadAvailableUsers = () => {
@@ -97,6 +121,14 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
     setCreateDialog(false);
     setCrewFormData({ unitName: '', members: [] });
     toast({ title: 'Экипаж создан', description: `Экипаж ${crewFormData.unitName} успешно создан` });
+  };
+
+  const handleOpenCreateDialog = () => {
+    if (dispatcherOnDuty) {
+      toast({ title: 'Недоступно', description: 'Диспетчер на дежурстве. Обратитесь к диспетчеру.', variant: 'destructive' });
+      return;
+    }
+    setCreateDialog(true);
   };
 
   const handleDeleteCrew = () => {
@@ -273,7 +305,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
                     {!dispatcherOnDuty ? (
                       <>
                         <p className="text-sm text-muted-foreground mt-1 mb-4">Создайте экипаж самостоятельно</p>
-                        <Button onClick={() => setCreateDialog(true)} variant="default">
+                        <Button onClick={handleOpenCreateDialog} variant="default">
                           <Icon name="Plus" size={16} className="mr-2" />
                           Создать экипаж
                         </Button>

@@ -191,6 +191,7 @@ export const getCrews = (): Crew[] => {
 
 export const saveCrews = (crews: Crew[]): void => {
   localStorage.setItem(CREWS_KEY, JSON.stringify(crews));
+  window.dispatchEvent(new CustomEvent('crews_updated'));
 };
 
 export const updateCrewStatus = (crewId: number, status: Crew['status'], location?: string, userId?: string): void => {
@@ -322,6 +323,7 @@ export const startDispatcherShift = (dispatcher: User): void => {
   if (!alreadyOnDuty) {
     shifts.push(newShift);
     localStorage.setItem(DISPATCHER_SHIFTS_KEY, JSON.stringify(shifts));
+    window.dispatchEvent(new CustomEvent('dispatcher_shift_changed'));
   }
 };
 
@@ -329,6 +331,7 @@ export const endDispatcherShift = (dispatcherId: string): void => {
   const shifts = getActiveDispatcherShifts();
   const filtered = shifts.filter(s => s.dispatcherId !== dispatcherId);
   localStorage.setItem(DISPATCHER_SHIFTS_KEY, JSON.stringify(filtered));
+  window.dispatchEvent(new CustomEvent('dispatcher_shift_changed'));
 };
 
 export const getActiveDispatcherShifts = (): DispatcherShift[] => {

@@ -134,14 +134,21 @@ const CrewsTab = () => {
       }
     };
 
+    const handleCrewsUpdate = () => {
+      loadCrews();
+    };
+
     window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('crews_updated', handleCrewsUpdate);
     
     const interval = setInterval(() => {
+      loadCrews();
       loadAvailableUsers();
     }, 2000);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('crews_updated', handleCrewsUpdate);
       clearInterval(interval);
     };
   }, []);
