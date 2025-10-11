@@ -7,9 +7,9 @@ from datetime import datetime
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     '''
-    Business: API для управления экипажами и их участниками
+    Business: API для управления юнитами (экипажами) и их участниками
     Args: event с httpMethod, body, queryStringParameters
-    Returns: JSON с данными экипажей
+    Returns: JSON с данными юнитов
     '''
     method: str = event.get('httpMethod', 'GET')
     
@@ -35,17 +35,17 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     try:
         if method == 'GET':
             cur.execute(f'''
-                SELECT c.id, c.unit_name, c.status, c.location, c.last_update,
-                       COALESCE(json_agg(cm.member_name) FILTER (WHERE cm.member_name IS NOT NULL), '[]') as members
-                FROM {schema}.crews c
-                LEFT JOIN {schema}.crew_members cm ON c.id = cm.crew_id
-                GROUP BY c.id, c.unit_name, c.status, c.location, c.last_update
-                ORDER BY c.id
+                SELECT u.id, u.unit_name, u.status, u.location, u.last_update,
+                       COALESCE(json_agg(um.member_name) FILTER (WHERE um.member_name IS NOT NULL), '[]') as members
+                FROM {schema}.units u
+                LEFT JOIN {schema}.unit_members um ON u.id = um.unit_id
+                GROUP BY u.id, u.unit_name, u.status, u.location, u.last_update
+                ORDER BY u.id
             ''')
             
-            crews = []
+            units = []
             for row in cur.fetchall():
-                crews.append({
+                units.append({
                     'id': row['id'],
                     'unitName': row['unit_name'],
                     'status': row['status'],
@@ -57,7 +57,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             return {
                 'statusCode': 200,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({'crews': crews})
+                'body': json.dumps({'units': units})
             }
         
         elif method == 'POST':
@@ -68,54 +68,54 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             members = body.get('members', [])
             now = datetime.now().isoformat()
             
-            cur.execute(f"INSERT INTO {schema}.crews (unit_name, status, location, last_update) VALUES ('{unit_name}', '{status}', '{location}', '{now}') RETURNING id")
-            crew_id = cur.fetchone()['id']
+            cur.execute(f"INSERT INTO {schema}.units (unit_name, status, location, last_update) VALUES ('{unit_name}', '{status}', '{location}', '{now}') RETURNING id")
+            unit_id = cur.fetchone()['id']
             
             for member in members:
                 member_safe = member.replace("'", "''")
-                cur.execute(f"INSERT INTO {schema}.crew_members (crew_id, member_name) VALUES ({crew_id}, '{member_safe}')")
+                cur.execute(f"INSERT INTO {schema}.unit_members (unit_id, member_name) VALUES ({unit_id}, '{member_safe}')")
             
             return {
                 'statusCode': 201,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({'id': crew_id, 'message': 'Экипаж создан'})
+                'body': json.dumps({'id': unit_id, 'message': 'Юнит создан'})
             }
         
         elif method == 'PUT':
             body = json.loads(event.get('body', '{}'))
-            crew_id = body.get('id')
+            unit_id = body.get('id')
             now = datetime.now().isoformat()
             
             if body.get('status'):
-                cur.execute(f"UPDATE {schema}.crews SET status = '{body['status']}', last_update = '{now}' WHERE id = {crew_id}")
+                cur.execute(f"UPDATE {schema}.units SET status = '{body['status']}', last_update = '{now}' WHERE id = {unit_id}")
             
             if body.get('location'):
                 location_safe = body['location'].replace("'", "''")
-                cur.execute(f"UPDATE {schema}.crews SET location = '{location_safe}', last_update = '{now}' WHERE id = {crew_id}")
+                cur.execute(f"UPDATE {schema}.units SET location = '{location_safe}', last_update = '{now}' WHERE id = {unit_id}")
             
             if 'members' in body:
-                cur.execute(f'DELETE FROM {schema}.crew_members WHERE crew_id = {crew_id}')
+                cur.execute(f'DELETE FROM {schema}.unit_members WHERE unit_id = {unit_id}')
                 for member in body['members']:
                     member_safe = member.replace("'", "''")
-                    cur.execute(f"INSERT INTO {schema}.crew_members (crew_id, member_name) VALUES ({crew_id}, '{member_safe}')")
+                    cur.execute(f"INSERT INTO {schema}.unit_members (unit_id, member_name) VALUES ({unit_id}, '{member_safe}')")
             
             return {
                 'statusCode': 200,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({'message': 'Экипаж обновлён'})
+                'body': json.dumps({'message': 'Юнит обновлён'})
             }
         
         elif method == 'DELETE':
             params = event.get('queryStringParameters', {})
-            crew_id = params.get('id')
+            unit_id = params.get('id')
             
-            cur.execute(f'DELETE FROM {schema}.crew_members WHERE crew_id = {crew_id}')
-            cur.execute(f'DELETE FROM {schema}.crews WHERE id = {crew_id}')
+            cur.execute(f'DELETE FROM {schema}.unit_members WHERE unit_id = {unit_id}')
+            cur.execute(f'DELETE FROM {schema}.units WHERE id = {unit_id}')
             
             return {
                 'statusCode': 200,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({'message': 'Экипаж удалён'})
+                'body': json.dumps({'message': 'Юнит удалён'})
             }
     
     finally:

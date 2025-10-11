@@ -1,21 +1,21 @@
 {
   "tests": [
     {
-      "name": "Получить список экипажей",
+      "name": "Получить список юнитов",
       "method": "GET",
       "path": "/",
       "expectedStatus": 200,
       "expectedBody": {
-        "crews": "array"
+        "units": "array"
       },
       "bodyMatcher": "partial"
     },
     {
-      "name": "Создать новый экипаж",
+      "name": "Создать новый юнит",
       "method": "POST",
       "path": "/",
       "body": {
-        "unitName": "Test-Unit",
+        "unitName": "Test-Unit-New",
         "status": "available",
         "location": "Test Location",
         "members": ["Тестовый сотрудник"]
