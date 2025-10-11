@@ -365,12 +365,18 @@ export const changeUserId = (oldUserId: string, newUserId: string): boolean => {
 // CREWS API
 // ============================================================================
 
-export const getCrews = (): Crew[] => {
-  fetchUnits().then(units => {
+export const syncCrewsFromAPI = async (): Promise<void> => {
+  try {
+    const units = await fetchUnits();
     storage.set(KEYS.CREWS, units);
     syncManager.notify('crews_updated');
-  }).catch(err => console.error('Error syncing units:', err));
-  
+  } catch (err) {
+    console.error('Error syncing units from API:', err);
+  }
+};
+
+export const getCrews = (): Crew[] => {
+  syncCrewsFromAPI();
   return storage.get<Crew[]>(KEYS.CREWS, []);
 };
 

@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Icon from '@/components/ui/icon';
 import ProfileDialog from './ProfileDialog';
 import { type User } from '@/lib/auth';
-import { getUserCrew, getCrewCalls, updateCrewStatus, isDispatcherOnDuty, getActiveDispatcherShifts, getAvailableCrewMembers, createCrew, deleteCrew, type Crew, type Call } from '@/lib/store';
+import { getUserCrew, getCrewCalls, updateCrewStatus, isDispatcherOnDuty, getActiveDispatcherShifts, getAvailableCrewMembers, createCrew, deleteCrew, syncCrewsFromAPI, type Crew, type Call } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { useSync } from '@/hooks/use-sync';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -49,8 +49,10 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
   const [crewFormData, setCrewFormData] = useState({ unitName: '', members: [] as string[] });
   const { toast } = useToast();
 
-  const loadData = () => {
+  const loadData = async () => {
     if (!currentUser) return;
+    
+    await syncCrewsFromAPI();
     
     const crew = getUserCrew(currentUser.id);
     setMyCrew(crew);
