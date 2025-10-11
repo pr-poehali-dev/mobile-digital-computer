@@ -104,7 +104,9 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
   };
 
   const handleCreateCrew = () => {
-    if (dispatcherOnDuty) {
+    const currentDispatcherStatus = isDispatcherOnDuty();
+    console.log('Create crew - dispatcher on duty:', currentDispatcherStatus);
+    if (currentDispatcherStatus) {
       toast({ title: 'Недоступно', description: 'Диспетчер на дежурстве. Обратитесь к диспетчеру.', variant: 'destructive' });
       setCreateDialog(false);
       return;
@@ -116,6 +118,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
     if (!crewFormData.members.includes(currentUser!.id)) {
       crewFormData.members.push(currentUser!.id);
     }
+    console.log('Creating crew:', crewFormData.unitName, 'members:', crewFormData.members);
     createCrew(crewFormData.unitName, crewFormData.members, currentUser!.id);
     loadData();
     setCreateDialog(false);
@@ -124,7 +127,9 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
   };
 
   const handleOpenCreateDialog = () => {
-    if (dispatcherOnDuty) {
+    const currentDispatcherStatus = isDispatcherOnDuty();
+    console.log('Open dialog - dispatcher on duty:', currentDispatcherStatus);
+    if (currentDispatcherStatus) {
       toast({ title: 'Недоступно', description: 'Диспетчер на дежурстве. Обратитесь к диспетчеру.', variant: 'destructive' });
       return;
     }

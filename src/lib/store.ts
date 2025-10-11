@@ -180,17 +180,23 @@ export const getCrews = (): Crew[] => {
   if (stored) {
     try {
       const crews = JSON.parse(stored);
-      return crews.filter((c: Crew) => c.members && c.members.length > 0);
+      const filtered = crews.filter((c: Crew) => c.members && c.members.length > 0);
+      console.log('getCrews - stored:', crews.length, 'filtered:', filtered.length);
+      return filtered;
     } catch {
+      console.log('getCrews - parse error, returning defaults');
       return defaultCrews;
     }
   }
+  console.log('getCrews - no stored data, returning defaults');
   localStorage.setItem(CREWS_KEY, JSON.stringify(defaultCrews));
   return defaultCrews;
 };
 
 export const saveCrews = (crews: Crew[]): void => {
+  console.log('saveCrews called with:', crews);
   localStorage.setItem(CREWS_KEY, JSON.stringify(crews));
+  console.log('localStorage updated, dispatching event');
   window.dispatchEvent(new CustomEvent('crews_updated'));
 };
 
@@ -229,7 +235,9 @@ export const createCrew = (unitName: string, members: string[], creatorId?: stri
     lastUpdate: new Date().toISOString(),
     members
   };
+  console.log('Creating crew in store:', newCrew);
   saveCrews([...crews, newCrew]);
+  console.log('Crew saved, total crews:', getCrews().length);
   
   if (creatorId) {
     const users = getAllUsers();
@@ -353,6 +361,7 @@ export const getActiveDispatcherShift = (): DispatcherShift | null => {
 
 export const isDispatcherOnDuty = (): boolean => {
   const shifts = getActiveDispatcherShifts();
+  console.log('isDispatcherOnDuty check - shifts:', shifts, 'result:', shifts.length > 0);
   return shifts.length > 0;
 };
 

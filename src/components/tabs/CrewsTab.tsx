@@ -154,7 +154,9 @@ const CrewsTab = () => {
   }, []);
 
   const loadCrews = () => {
-    setCrews(getCrews());
+    const crews = getCrews();
+    console.log('CrewsTab - Loading crews:', crews);
+    setCrews(crews);
   };
 
   const loadCalls = () => {
