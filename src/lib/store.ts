@@ -328,7 +328,9 @@ export const changeUserId = (oldUserId: string, newUserId: string): boolean => {
 // ============================================================================
 
 export const getCrews = (): Crew[] => {
-  return storage.get<Crew[]>(KEYS.CREWS, []);
+  const crews = storage.get<Crew[]>(KEYS.CREWS, []);
+  console.log('[getCrews] Загрузка экипажей из localStorage:', crews);
+  return crews;
 };
 
 export const saveCrews = (crews: Crew[]): void => {
@@ -349,7 +351,13 @@ export const createCrew = async (unitName: string, members: string[], creatorId?
     lastUpdate: new Date().toISOString()
   };
   
+  console.log('[createCrew] Создание экипажа:', { newCrew, existingCrews: crews.length, creatorId });
+  
   storage.set(KEYS.CREWS, [...crews, newCrew]);
+  
+  const saved = storage.get<Crew[]>(KEYS.CREWS, []);
+  console.log('[createCrew] После сохранения в localStorage:', saved);
+  
   syncManager.notify('crews_updated');
   
   if (creatorId) {
@@ -487,7 +495,9 @@ export const removeOnlineUser = (userId: string): void => {
 };
 
 export const getAvailableCrewMembers = (): User[] => {
-  return getAllUsers();
+  const excludedRoles = ['manager', 'dispatcher', 'supervisor'];
+  const allUsers = getAllUsers();
+  return allUsers.filter(u => !excludedRoles.includes(u.role));
 };
 
 // ============================================================================

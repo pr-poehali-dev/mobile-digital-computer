@@ -65,7 +65,9 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
   useSync(['crews_updated', 'online_users_changed', 'calls_updated'], loadAll, 2000);
 
   const loadCrews = () => {
-    setCrews(getCrews());
+    const loadedCrews = getCrews();
+    console.log('[CrewsTab] loadCrews вызван, получено экипажей:', loadedCrews.length, loadedCrews);
+    setCrews(loadedCrews);
   };
 
   const loadCalls = () => {
