@@ -135,6 +135,8 @@ const storage = {
       [KEYS.DISPATCHER_SHIFTS]: 'dispatcher_shift_changed',
       [KEYS.ONLINE_USERS]: 'online_users_changed',
       [KEYS.ACTIVITY_LOG]: 'activity_log_updated',
+      [KEYS.SYSTEM_LOCKDOWN]: 'system_lockdown_changed',
+      [KEYS.USER_SETTINGS]: 'user_settings_changed',
     };
     
     const eventType = eventMap[key];
