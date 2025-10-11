@@ -242,6 +242,11 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
 
   return (
     <div className="space-y-6">
+      {/* DEBUG: показать статус */}
+      <div className="p-4 bg-yellow-100 dark:bg-yellow-900 rounded text-sm">
+        <strong>DEBUG:</strong> currentUser={currentUser?.fullName || 'null'} | role={currentUser?.role || 'null'} | canManage={canManageUsers ? 'ДА' : 'НЕТ'}
+      </div>
+      
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -284,11 +289,15 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(user)}>
                         <Icon name="Edit" size={16} />
                       </Button>
-                      {(currentUser?.role === 'manager' || currentUser?.role === 'supervisor') && user.id !== currentUser?.id && (
-                        <Button variant="ghost" size="icon" onClick={() => handleChangeId(user)}>
-                          <Icon name="Hash" size={16} />
-                        </Button>
-                      )}
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => handleChangeId(user)}
+                        disabled={user.id === currentUser?.id}
+                        title={`Изменить ID (доступно: ${(currentUser?.role === 'manager' || currentUser?.role === 'supervisor') && user.id !== currentUser?.id})`}
+                      >
+                        <Icon name="Hash" size={16} />
+                      </Button>
                       <Button 
                         variant="ghost" 
                         size="icon" 
