@@ -7,11 +7,13 @@ import { type Crew, type User } from "@/lib/store";
 interface CrewCardProps {
   crew: Crew;
   allUsers: User[];
+  currentUser: User | null;
   onEdit: (crew: Crew) => void;
   onManage: (crew: Crew) => void;
   onDelete: (crewId: number) => void;
   onAssign: (crew: Crew) => void;
   onStatusChange: (crewId: number, status: Crew["status"]) => void;
+  onPanicToggle: (crewId: number, activate: boolean) => void;
 }
 
 const getStatusConfig = (status: Crew["status"]) => {
@@ -54,11 +56,13 @@ const getStatusConfig = (status: Crew["status"]) => {
 const CrewCard = ({
   crew,
   allUsers,
+  currentUser,
   onEdit,
   onManage,
   onDelete,
   onAssign,
   onStatusChange,
+  onPanicToggle,
 }: CrewCardProps) => {
   const statusConfig = getStatusConfig(crew.status);
   const lastUpdate = new Date(crew.lastUpdate).toLocaleTimeString("ru-RU", {
@@ -137,47 +141,66 @@ const CrewCard = ({
           </div>
         </div>
 
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            className="flex-1"
-            size="sm"
-            onClick={() => onEdit(crew)}
-          >
-            <Icon name="Settings" size={16} className="mr-1" />
-            Статус
-          </Button>
-          {crew.status === "available" && (
-            <Button
-              variant="default"
-              className="flex-1"
-              size="sm"
-              onClick={() => onAssign(crew)}
-            >
-              <Icon name="Send" size={16} className="mr-1" />
-              Назначить
-            </Button>
-          )}
-          {crew.status === "unavailable" && (
+        <div className="space-y-2">
+          <div className="flex gap-2">
             <Button
               variant="outline"
               className="flex-1"
               size="sm"
-              onClick={() => onStatusChange(crew.id, "available")}
+              onClick={() => onEdit(crew)}
             >
-              <Icon name="CheckCircle2" size={16} className="mr-1" />
-              Активировать
+              <Icon name="Settings" size={16} className="mr-1" />
+              Статус
             </Button>
-          )}
-          {(crew.status === "en-route" || crew.status === "on-scene") && (
+            {crew.status === "available" && (
+              <Button
+                variant="default"
+                className="flex-1"
+                size="sm"
+                onClick={() => onAssign(crew)}
+              >
+                <Icon name="Send" size={16} className="mr-1" />
+                Назначить
+              </Button>
+            )}
+            {crew.status === "unavailable" && (
+              <Button
+                variant="outline"
+                className="flex-1"
+                size="sm"
+                onClick={() => onStatusChange(crew.id, "available")}
+              >
+                <Icon name="CheckCircle2" size={16} className="mr-1" />
+                Активировать
+              </Button>
+            )}
+            {(crew.status === "en-route" || crew.status === "on-scene") && (
+              <Button
+                variant="outline"
+                className="flex-1"
+                size="sm"
+                onClick={() => onStatusChange(crew.id, "available")}
+              >
+                <Icon name="Home" size={16} className="mr-1" />
+                Освободить
+              </Button>
+            )}
+          </div>
+          
+          {crew.status !== "unavailable" && (
             <Button
-              variant="outline"
-              className="flex-1"
+              onClick={() => onPanicToggle(crew.id, !crew.panicActive)}
+              disabled={false}
+              variant={crew.panicActive ? "destructive" : "default"}
               size="sm"
-              onClick={() => onStatusChange(crew.id, "available")}
+              className={`w-full gap-2 font-bold ${
+                crew.panicActive 
+                  ? 'bg-red-600 hover:bg-red-700' 
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
             >
-              <Icon name="Home" size={16} className="mr-1" />
-              Освободить
+              <Icon name="AlertTriangle" size={18} />
+              {crew.panicActive ? 'СБРОСИТЬ ТРЕВОГУ' : 'КНОПКА ПАНИКИ'}
             </Button>
           )}
         </div>

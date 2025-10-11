@@ -322,8 +322,6 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
                         Управление статусом через диспетчера
                       </div>
                     )}
-
-
                   </div>
                 ) : (
                   <div className="text-center py-8">

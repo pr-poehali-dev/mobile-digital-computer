@@ -12,6 +12,8 @@ import {
   getAllUsers,
   getCalls,
   assignCrewToCall,
+  activatePanic,
+  resetPanic,
   type Crew,
 } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
@@ -208,6 +210,30 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
     }
   };
 
+  const handlePanicToggle = (crewId: number, activate: boolean) => {
+    if (!currentUser) return;
+    
+    const crew = crews.find((c) => c.id === crewId);
+    if (!crew) return;
+    
+    if (activate) {
+      activatePanic(crewId, currentUser.id);
+      toast({
+        title: '🚨 ТРЕВОГА АКТИВИРОВАНА',
+        description: `Сигнал тревоги от экипажа ${crew.unitName}`,
+        variant: 'destructive',
+      });
+    } else {
+      resetPanic(crewId, currentUser.id);
+      toast({
+        title: 'Тревога сброшена',
+        description: `Сигнал тревоги для экипажа ${crew.unitName} сброшен`,
+      });
+    }
+    
+    loadCrews();
+  };
+
   const toggleMember = (userId: string) => {
     setCrewFormData((prev) => ({
       ...prev,
@@ -294,11 +320,13 @@ const CrewsTab = ({ currentUser }: CrewsTabProps) => {
             key={crew.id}
             crew={crew}
             allUsers={allUsers}
+            currentUser={currentUser}
             onEdit={handleEdit}
             onManage={handleManage}
             onDelete={(crewId) => setDeleteDialog({ open: true, crewId })}
             onAssign={handleAssign}
             onStatusChange={handleStatusChange}
+            onPanicToggle={handlePanicToggle}
           />
         ))}
       </div>
