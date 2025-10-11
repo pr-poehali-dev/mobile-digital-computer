@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
-import { getCalls, getCrews, syncCrewsFromAPI, getAllUsers, getDispatcherStats } from '@/lib/store';
+import { getCalls, getCrews, getAllUsers, getDispatcherStats } from '@/lib/store';
 
 const AnalyticsTab = () => {
   const [calls, setCalls] = useState<ReturnType<typeof getCalls>>([]);
@@ -11,8 +11,7 @@ const AnalyticsTab = () => {
   const [dispatchers, setDispatchers] = useState<ReturnType<typeof getAllUsers>>([]);
 
   useEffect(() => {
-    const loadData = async () => {
-      await syncCrewsFromAPI();
+    const loadData = () => {
       setCalls(getCalls());
       setCrews(getCrews());
       setDispatchers(getAllUsers().filter(u => u.role === 'dispatcher'));

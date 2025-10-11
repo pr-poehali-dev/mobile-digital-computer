@@ -10,7 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getCalls, deleteCall, deleteCalls, clearAllCalls, updateCallDispatcher, updateCallStatus, createCall, assignCrewToCall, getCrews, syncCrewsFromAPI, getAllUsers, type Call, type Crew } from '@/lib/store';
+import { getCalls, deleteCall, deleteCalls, clearAllCalls, updateCallDispatcher, updateCallStatus, createCall, assignCrewToCall, getCrews, getAllUsers, type Call, type Crew } from '@/lib/store';
 import { canDeleteCalls, canEditDispatchers } from '@/lib/permissions';
 import { type User } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -61,8 +61,7 @@ const CallsTab = ({ currentUser }: CallsTabProps) => {
   });
   const { toast } = useToast();
 
-  const loadData = async () => {
-    await syncCrewsFromAPI();
+  const loadData = () => {
     setCalls(getCalls());
     setCrews(getCrews());
     setDispatchers(getAllUsers().filter(u => u.role === 'dispatcher'));
