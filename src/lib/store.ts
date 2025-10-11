@@ -329,7 +329,10 @@ export const removeOnlineUser = (userId: string): void => {
 export const getAvailableCrewMembers = (): User[] => {
   const excludedRoles = ['manager', 'dispatcher', 'supervisor'];
   const onlineUsers = getOnlineUsers();
-  return onlineUsers.filter(u => !excludedRoles.includes(u.role));
+  console.log('getAvailableCrewMembers - online users:', onlineUsers);
+  const filtered = onlineUsers.filter(u => !excludedRoles.includes(u.role));
+  console.log('getAvailableCrewMembers - filtered:', filtered);
+  return filtered;
 };
 
 export const startDispatcherShift = (dispatcher: User): void => {
