@@ -1195,7 +1195,7 @@ export const updateSystemRestrictions = (restrictions: Partial<SystemRestriction
       const calls = getCalls();
       const activeCalls = calls.filter(c => c.status !== 'completed');
       activeCalls.forEach(call => {
-        completeCall(call.id);
+        updateCallStatus(call.id, 'completed');
       });
       
       const crews = getCrews();
