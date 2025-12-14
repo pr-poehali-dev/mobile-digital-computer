@@ -1,3 +1,5 @@
+import bcrypt from 'bcryptjs';
+
 export interface User {
   id: string;
   fullName: string;
@@ -11,67 +13,124 @@ export interface User {
   registeredAt?: string;
 }
 
-const USERS_DB = [
+interface UserWithPassword {
+  id: string;
+  passwordHash: string;
+  fullName: string;
+  role: User['role'];
+  email: string;
+  frozen?: boolean;
+  frozenBy?: string;
+  frozenAt?: string;
+  frozenBySystem?: boolean;
+  pendingActivation?: boolean;
+  registeredAt?: string;
+}
+
+const USERS_DB: UserWithPassword[] = [
   {
     id: '10001',
-    password: 'Admin2024!',
+    passwordHash: bcrypt.hashSync('Admin2024!', 10),
     fullName: 'Петров Петр Петрович',
     role: 'manager',
     email: 'manager@mdc.system'
   },
   {
     id: '10002',
-    password: 'Disp2024!',
+    passwordHash: bcrypt.hashSync('Disp2024!', 10),
     fullName: 'Иванов Иван Иванович',
     role: 'dispatcher',
     email: 'dispatcher@mdc.system'
   },
   {
     id: '10003',
-    password: 'Super2024!',
+    passwordHash: bcrypt.hashSync('Super2024!', 10),
     fullName: 'Сидоров Сергей Сергеевич',
     role: 'supervisor',
     email: 'supervisor@mdc.system'
   },
   {
     id: '10004',
-    password: 'Emp2024!',
+    passwordHash: bcrypt.hashSync('Emp2024!', 10),
     fullName: 'Васильев Василий Васильевич',
     role: 'employee',
     email: 'employee@mdc.system'
   }
 ];
 
-const initializeUsers = () => {
-  const existingUsers = localStorage.getItem('mdc_users');
-  if (!existingUsers) {
-    localStorage.setItem('mdc_users', JSON.stringify(USERS_DB));
-  } else {
+const STORAGE_KEYS = {
+  USERS_DATA: 'mdc_users_data',
+  PASSWORDS: 'mdc_passwords',
+  AUTH: 'mdc_auth',
+  USER: 'mdc_user',
+  LOCKDOWN: 'mdc_system_lockdown'
+} as const;
+
+const migrateOldData = () => {
+  const oldUsers = localStorage.getItem('mdc_users');
+  if (oldUsers) {
     try {
-      const users = JSON.parse(existingUsers);
-      const needsMigration = users.some((u: any) => typeof u.id === 'number');
-      if (needsMigration) {
-        localStorage.setItem('mdc_users', JSON.stringify(USERS_DB));
-        localStorage.removeItem('mdc_auth');
-        localStorage.removeItem('mdc_user');
+      const users = JSON.parse(oldUsers);
+      if (users.some((u: any) => u.password && !u.passwordHash)) {
+        console.log('[Auth] Migrating old password format to hashed format');
+        const migratedUsers = users.map((u: any) => {
+          if (u.password && !u.passwordHash) {
+            const { password, ...rest } = u;
+            return {
+              ...rest,
+              passwordHash: bcrypt.hashSync(password, 10)
+            };
+          }
+          return u;
+        });
+        localStorage.setItem(STORAGE_KEYS.PASSWORDS, JSON.stringify(migratedUsers));
+        
+        const usersWithoutPasswords = migratedUsers.map(({ passwordHash, ...user }: any) => user);
+        localStorage.setItem(STORAGE_KEYS.USERS_DATA, JSON.stringify(usersWithoutPasswords));
+        
+        localStorage.removeItem('mdc_users');
       }
-    } catch {
-      localStorage.setItem('mdc_users', JSON.stringify(USERS_DB));
+    } catch (e) {
+      console.error('[Auth] Migration error:', e);
     }
+  }
+};
+
+const initializeUsers = () => {
+  migrateOldData();
+  
+  const existingPasswords = localStorage.getItem(STORAGE_KEYS.PASSWORDS);
+  const existingUsers = localStorage.getItem(STORAGE_KEYS.USERS_DATA);
+  
+  if (!existingPasswords || !existingUsers) {
+    localStorage.setItem(STORAGE_KEYS.PASSWORDS, JSON.stringify(USERS_DB));
+    
+    const usersWithoutPasswords = USERS_DB.map(({ passwordHash, ...user }) => user);
+    localStorage.setItem(STORAGE_KEYS.USERS_DATA, JSON.stringify(usersWithoutPasswords));
   }
 };
 
 initializeUsers();
 
+const getUsersWithPasswords = (): UserWithPassword[] => {
+  const data = localStorage.getItem(STORAGE_KEYS.PASSWORDS);
+  return data ? JSON.parse(data) : USERS_DB;
+};
+
+const saveUsersWithPasswords = (users: UserWithPassword[]): void => {
+  localStorage.setItem(STORAGE_KEYS.PASSWORDS, JSON.stringify(users));
+  
+  const usersWithoutPasswords = users.map(({ passwordHash, ...user }) => user);
+  localStorage.setItem(STORAGE_KEYS.USERS_DATA, JSON.stringify(usersWithoutPasswords));
+};
+
 export const authenticate = async (userIdOrEmail: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
   await new Promise(resolve => setTimeout(resolve, 500));
 
-  const usersData = localStorage.getItem('mdc_users');
-  const users = usersData ? JSON.parse(usersData) : USERS_DB;
+  const users = getUsersWithPasswords();
   
-  const userWithPassword = users.find((u: any) => 
-    (u.id === userIdOrEmail || u.email.toLowerCase() === userIdOrEmail.toLowerCase()) && 
-    u.password === password
+  const userWithPassword = users.find((u) => 
+    u.id === userIdOrEmail || u.email.toLowerCase() === userIdOrEmail.toLowerCase()
   );
 
   if (!userWithPassword) {
@@ -81,7 +140,16 @@ export const authenticate = async (userIdOrEmail: string, password: string): Pro
     };
   }
 
-  const { password: _, ...userData } = userWithPassword;
+  const passwordMatch = await bcrypt.compare(password, userWithPassword.passwordHash);
+  
+  if (!passwordMatch) {
+    return {
+      success: false,
+      error: 'Неверный ID/Email или пароль'
+    };
+  }
+
+  const { passwordHash: _, ...userData } = userWithPassword;
   
   if (userData.pendingActivation) {
     return {
@@ -103,7 +171,7 @@ export const authenticate = async (userIdOrEmail: string, password: string): Pro
     };
   }
   
-  const lockdownData = localStorage.getItem('mdc_system_lockdown');
+  const lockdownData = localStorage.getItem(STORAGE_KEYS.LOCKDOWN);
   if (lockdownData) {
     try {
       const lockdown = JSON.parse(lockdownData);
@@ -125,13 +193,13 @@ export const authenticate = async (userIdOrEmail: string, password: string): Pro
 };
 
 export const saveUserSession = (user: User) => {
-  localStorage.setItem('mdc_auth', 'true');
-  localStorage.setItem('mdc_user', JSON.stringify(user));
+  localStorage.setItem(STORAGE_KEYS.AUTH, 'true');
+  localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
 };
 
 export const getUserSession = (): User | null => {
-  const authStatus = localStorage.getItem('mdc_auth');
-  const userData = localStorage.getItem('mdc_user');
+  const authStatus = localStorage.getItem(STORAGE_KEYS.AUTH);
+  const userData = localStorage.getItem(STORAGE_KEYS.USER);
   
   if (authStatus === 'true' && userData) {
     try {
@@ -145,8 +213,8 @@ export const getUserSession = (): User | null => {
 };
 
 export const clearUserSession = () => {
-  localStorage.removeItem('mdc_auth');
-  localStorage.removeItem('mdc_user');
+  localStorage.removeItem(STORAGE_KEYS.AUTH);
+  localStorage.removeItem(STORAGE_KEYS.USER);
 };
 
 interface RegistrationData {
@@ -158,64 +226,75 @@ interface RegistrationData {
 export const register = async (data: RegistrationData): Promise<{ success: boolean; error?: string }> => {
   await new Promise(resolve => setTimeout(resolve, 500));
 
-  const usersData = localStorage.getItem('mdc_users');
-  const users = usersData ? JSON.parse(usersData) : USERS_DB;
+  const users = getUsersWithPasswords();
 
-  if (users.find((u: any) => u.email.toLowerCase() === data.email.toLowerCase())) {
+  if (users.find((u) => u.email.toLowerCase() === data.email.toLowerCase())) {
     return {
       success: false,
       error: 'Пользователь с такой электронной почтой уже существует'
     };
   }
 
-  const maxId = Math.max(...users.map((u: any) => parseInt(u.id)));
+  const maxId = Math.max(...users.map((u) => parseInt(u.id)));
   const newId = (maxId + 1).toString();
 
-  const newUser = {
+  const passwordHash = await bcrypt.hash(data.password, 10);
+
+  const newUser: UserWithPassword = {
     id: newId,
-    password: data.password,
+    passwordHash,
     fullName: data.fullName,
     email: data.email,
-    role: 'employee' as const,
+    role: 'employee',
     pendingActivation: true,
     registeredAt: new Date().toISOString()
   };
 
   users.push(newUser);
-  localStorage.setItem('mdc_users', JSON.stringify(users));
+  saveUsersWithPasswords(users);
 
   return { success: true };
 };
 
 export const getPendingUsers = (): Array<User & { id: string }> => {
-  const usersData = localStorage.getItem('mdc_users');
-  const users = usersData ? JSON.parse(usersData) : [];
+  const users = getUsersWithPasswords();
   
   return users
-    .filter((u: any) => u.pendingActivation)
-    .map(({ password, ...user }: any) => user);
+    .filter((u) => u.pendingActivation)
+    .map(({ passwordHash, ...user }) => user);
 };
 
 export const activateUser = (userId: string, role: User['role']): boolean => {
-  const usersData = localStorage.getItem('mdc_users');
-  const users = usersData ? JSON.parse(usersData) : [];
+  const users = getUsersWithPasswords();
   
-  const userIndex = users.findIndex((u: any) => u.id === userId);
+  const userIndex = users.findIndex((u) => u.id === userId);
   if (userIndex === -1) return false;
   
   users[userIndex].pendingActivation = false;
   users[userIndex].role = role;
   
-  localStorage.setItem('mdc_users', JSON.stringify(users));
+  saveUsersWithPasswords(users);
   return true;
 };
 
 export const rejectRegistration = (userId: string): boolean => {
-  const usersData = localStorage.getItem('mdc_users');
-  const users = usersData ? JSON.parse(usersData) : [];
+  const users = getUsersWithPasswords();
   
-  const filteredUsers = users.filter((u: any) => u.id !== userId);
-  localStorage.setItem('mdc_users', JSON.stringify(filteredUsers));
+  const filteredUsers = users.filter((u) => u.id !== userId);
+  saveUsersWithPasswords(filteredUsers);
   
+  return true;
+};
+
+export const changeUserPassword = async (userId: string, newPassword: string): Promise<boolean> => {
+  const users = getUsersWithPasswords();
+  
+  const userIndex = users.findIndex((u) => u.id === userId);
+  if (userIndex === -1) return false;
+  
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  users[userIndex].passwordHash = passwordHash;
+  
+  saveUsersWithPasswords(users);
   return true;
 };

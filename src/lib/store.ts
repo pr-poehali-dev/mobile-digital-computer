@@ -129,8 +129,8 @@ export interface ShiftStatistics {
 
 const KEYS = {
   CALLS: 'mdc_calls',
-  USERS: 'mdc_users',
-  USERS_PASSWORDS: 'mdc_users_passwords',
+  USERS: 'mdc_users_data',
+  USERS_PASSWORDS: 'mdc_passwords',
   CREWS: 'mdc_crews',
   DISPATCHER_SHIFTS: 'mdc_dispatcher_shifts',
   ACTIVITY_LOG: 'mdc_activity_log',
@@ -382,7 +382,7 @@ export const getCrewCalls = (crewId: number): Call[] => {
 export const getAllUsers = (): User[] => {
   const users = storage.get<User[]>(KEYS.USERS, []);
   
-  if (users.length === 0 || users.some((u: any) => typeof u.id === 'number')) {
+  if (users.length === 0) {
     storage.set(KEYS.USERS, defaultUsers);
     return defaultUsers;
   }
@@ -395,7 +395,8 @@ export const saveAllUsers = (users: User[]): void => {
   syncManager.notify('users_updated');
 };
 
-export const createUser = (userId: string, password: string, user: Omit<User, 'id'>): User => {
+export const createUser = async (userId: string, password: string, user: Omit<User, 'id'>): Promise<User> => {
+  const bcrypt = (await import('bcryptjs')).default;
   const users = getAllUsers();
   const newUser = { 
     ...user, 
@@ -406,7 +407,8 @@ export const createUser = (userId: string, password: string, user: Omit<User, 'i
   saveAllUsers([...users, newUser]);
   
   const usersWithPassword = storage.get<any[]>(KEYS.USERS_PASSWORDS, []);
-  usersWithPassword.push({ id: sanitizeId(userId), password });
+  const passwordHash = await bcrypt.hash(password, 10);
+  usersWithPassword.push({ id: sanitizeId(userId), passwordHash });
   storage.set(KEYS.USERS_PASSWORDS, usersWithPassword);
   
   return newUser;
@@ -431,14 +433,6 @@ export const freezeUser = (userId: string, frozenBy: string): void => {
   );
   saveAllUsers(updatedUsers);
   
-  const usersWithPassword = storage.get<any[]>(KEYS.USERS_PASSWORDS, []);
-  const updatedPasswords = usersWithPassword.map(u => 
-    u.id === userId 
-      ? { ...u, frozen: true, frozenBy, frozenAt: new Date().toISOString() } 
-      : u
-  );
-  storage.set(KEYS.USERS_PASSWORDS, updatedPasswords);
-  
   removeOnlineUser(userId);
 };
 
@@ -450,14 +444,6 @@ export const unfreezeUser = (userId: string): void => {
       : u
   );
   saveAllUsers(updatedUsers);
-  
-  const usersWithPassword = storage.get<any[]>(KEYS.USERS_PASSWORDS, []);
-  const updatedPasswords = usersWithPassword.map(u => 
-    u.id === userId 
-      ? { ...u, frozen: false, frozenBy: undefined, frozenAt: undefined } 
-      : u
-  );
-  storage.set(KEYS.USERS_PASSWORDS, updatedPasswords);
 };
 
 export const deleteUser = (userId: string): void => {
@@ -481,12 +467,6 @@ export const changeUserId = (oldUserId: string, newUserId: string): boolean => {
     u.id === oldUserId ? { ...u, id: newUserId } : u
   );
   saveAllUsers(updatedUsers);
-  
-  const usersWithPassword = storage.get<any[]>(KEYS.USERS_PASSWORDS, []);
-  const updatedPasswords = usersWithPassword.map(u => 
-    u.id === oldUserId ? { ...u, id: newUserId } : u
-  );
-  storage.set(KEYS.USERS_PASSWORDS, updatedPasswords);
   
   const crews = getCrews();
   const updatedCrews = crews.map(crew => ({

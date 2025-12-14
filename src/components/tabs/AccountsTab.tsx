@@ -117,15 +117,6 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
         });
         return;
       }
-
-      const usersData = localStorage.getItem('mdc_users');
-      if (usersData) {
-        const users = JSON.parse(usersData);
-        const updated = users.map((u: any) => 
-          u.id === oldId ? { ...u, id: newId } : u
-        );
-        localStorage.setItem('mdc_users', JSON.stringify(updated));
-      }
     }
 
     updateUser(newId, {
@@ -144,7 +135,7 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
 
 
 
-  const handleSaveCreate = () => {
+  const handleSaveCreate = async () => {
     if (!formData.userId || formData.userId.length !== 5) {
       toast({
         title: 'Ошибка',
@@ -173,7 +164,7 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
       return;
     }
 
-    createUser(formData.userId, formData.password, {
+    await createUser(formData.userId, formData.password, {
       fullName: formData.fullName,
       email: formData.email,
       role: formData.role
