@@ -34,7 +34,7 @@ const PanicButton = ({ crewId, userId, crewName, disabled }: PanicButtonProps) =
     }
   };
 
-  useSync(['crews_updated', 'system_restrictions_changed'], updatePanicTimer, 1000);
+  useSync(['crews_updated', 'system_restrictions_changed'], updatePanicTimer, 5000);
 
   useEffect(() => {
     if (isPanicActive) {

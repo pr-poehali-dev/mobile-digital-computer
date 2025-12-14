@@ -54,7 +54,7 @@ const LogTab = ({ currentUser }: LogTabProps) => {
     setLogs(getActivityLogs());
   };
 
-  useSync(['logs_updated'], loadLogs, 2000);
+  useSync(['logs_updated'], loadLogs, 5000);
 
   const filteredLogs = logs.filter(log => {
     if (filterType === 'panic' && 

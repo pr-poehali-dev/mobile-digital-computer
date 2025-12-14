@@ -52,7 +52,7 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
     }
   };
 
-  useSync(['dispatcher_shift_changed', 'system_restrictions_changed'], updateStatus, 2000);
+  useSync(['dispatcher_shift_changed', 'system_restrictions_changed'], updateStatus, 5000);
 
   const handleToggleDuty = () => {
     if (!currentUser) return;

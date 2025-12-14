@@ -68,7 +68,7 @@ const CallsTab = ({ currentUser }: CallsTabProps) => {
     setDispatchers(getAllUsers().filter(u => u.role === 'dispatcher'));
   };
 
-  useSync(['calls_updated', 'crews_updated'], loadData, 2000);
+  useSync(['calls_updated', 'crews_updated'], loadData, 5000);
 
   const handleDelete = () => {
     if (deleteDialog.type === 'one' && deleteDialog.callId) {

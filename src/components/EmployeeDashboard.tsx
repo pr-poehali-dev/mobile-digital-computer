@@ -117,8 +117,8 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
     };
   }, [currentUser, myCrew]);
   
-  useSync(['dispatcher_shift_changed', 'crews_updated', 'calls_updated', 'system_restrictions_changed'], loadData, 2000);
-  useSync(['online_users_changed'], loadAvailableUsers, 2000);
+  useSync(['dispatcher_shift_changed', 'crews_updated', 'calls_updated', 'system_restrictions_changed'], loadData, 5000);
+  useSync(['online_users_changed'], loadAvailableUsers, 5000);
 
   const handleCreateCrew = async () => {
     if (isDispatcherOnDuty()) {

@@ -34,7 +34,7 @@ const Signal100Button = ({ crewId, userId, crewName, disabled }: Signal100Button
     }
   };
 
-  useSync(['crews_updated', 'signal100_changed', 'system_restrictions_changed'], updateSignal100Timer, 1000);
+  useSync(['crews_updated', 'signal100_changed', 'system_restrictions_changed'], updateSignal100Timer, 5000);
 
   useEffect(() => {
     if (isSignal100Active) {
