@@ -8,6 +8,7 @@ import { type User } from '@/lib/auth';
 import { getUserTestAssignments, getTestById, type TestAssignment } from '@/lib/store';
 import { useSync } from '@/hooks/use-sync';
 import TestTakingView from './TestTakingView';
+import TestResultsDialog from './TestResultsDialog';
 
 interface MyTestsViewProps {
   currentUser: User | null;
@@ -16,6 +17,8 @@ interface MyTestsViewProps {
 const MyTestsView = ({ currentUser }: MyTestsViewProps) => {
   const [assignments, setAssignments] = useState<TestAssignment[]>([]);
   const [activeAssignment, setActiveAssignment] = useState<TestAssignment | null>(null);
+  const [resultsOpen, setResultsOpen] = useState(false);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
 
   const loadAssignments = () => {
     if (!currentUser) return;
@@ -103,12 +106,27 @@ const MyTestsView = ({ currentUser }: MyTestsViewProps) => {
             )}
           </div>
 
-          {(assignment.status === 'pending' || assignment.status === 'in-progress') && (
-            <Button onClick={() => setActiveAssignment(assignment)} className="w-full">
-              <Icon name="Play" size={16} className="mr-2" />
-              {assignment.status === 'in-progress' ? 'Продолжить' : 'Начать тест'}
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {(assignment.status === 'pending' || assignment.status === 'in-progress') && (
+              <Button onClick={() => setActiveAssignment(assignment)} className="flex-1">
+                <Icon name="Play" size={16} className="mr-2" />
+                {assignment.status === 'in-progress' ? 'Продолжить' : 'Начать тест'}
+              </Button>
+            )}
+            {(assignment.status === 'completed' || assignment.status === 'passed' || assignment.status === 'failed') && (
+              <Button 
+                onClick={() => {
+                  setSelectedAssignmentId(assignment.id);
+                  setResultsOpen(true);
+                }} 
+                variant="outline"
+                className="flex-1"
+              >
+                <Icon name="Eye" size={16} className="mr-2" />
+                Посмотреть результаты
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     );
@@ -217,6 +235,14 @@ const MyTestsView = ({ currentUser }: MyTestsViewProps) => {
           </div>
         </TabsContent>
       </Tabs>
+
+      <TestResultsDialog
+        open={resultsOpen}
+        onOpenChange={setResultsOpen}
+        assignmentId={selectedAssignmentId}
+        currentUser={currentUser}
+        canReview={false}
+      />
     </div>
   );
 };

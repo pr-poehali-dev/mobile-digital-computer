@@ -19,6 +19,7 @@ interface TestAssignDialogProps {
 
 const TestAssignDialog = ({ open, onOpenChange, test, currentUser }: TestAssignDialogProps) => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [assignToAll, setAssignToAll] = useState(false);
   const [dueDate, setDueDate] = useState('');
   const [users, setUsers] = useState<User[]>([]);
   const { toast } = useToast();
@@ -27,6 +28,7 @@ const TestAssignDialog = ({ open, onOpenChange, test, currentUser }: TestAssignD
     if (open) {
       setUsers(getAllUsers().filter(u => u.role !== 'manager' && !u.frozen));
       setSelectedUsers([]);
+      setAssignToAll(false);
       setDueDate('');
     }
   }, [open]);
@@ -40,12 +42,15 @@ const TestAssignDialog = ({ open, onOpenChange, test, currentUser }: TestAssignD
   };
 
   const handleAssign = () => {
-    if (!test || !currentUser || selectedUsers.length === 0) return;
+    if (!test || !currentUser) return;
+    if (!assignToAll && selectedUsers.length === 0) return;
 
     let successCount = 0;
     let skipCount = 0;
 
-    selectedUsers.forEach(userId => {
+    const usersToAssign = assignToAll ? users.map(u => u.id) : selectedUsers;
+
+    usersToAssign.forEach(userId => {
       const existing = getUserTestAssignments(userId).find(
         a => a.testId === test.id && (a.status === 'pending' || a.status === 'in-progress')
       );
@@ -92,9 +97,24 @@ const TestAssignDialog = ({ open, onOpenChange, test, currentUser }: TestAssignD
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Выберите сотрудников ({selectedUsers.length} выбрано)</Label>
-            <div className="border rounded-lg p-4 space-y-2 max-h-96 overflow-y-auto">
+          <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/30">
+            <Checkbox
+              id="assignToAll"
+              checked={assignToAll}
+              onCheckedChange={(checked) => {
+                setAssignToAll(checked as boolean);
+                if (checked) setSelectedUsers([]);
+              }}
+            />
+            <Label htmlFor="assignToAll" className="flex-1 cursor-pointer font-medium">
+              Назначить всем сотрудникам
+            </Label>
+          </div>
+
+          {!assignToAll && (
+            <div className="space-y-2">
+              <Label>Выберите сотрудников ({selectedUsers.length} выбрано)</Label>
+              <div className="border rounded-lg p-4 space-y-2 max-h-96 overflow-y-auto">
               {users.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   Нет доступных сотрудников
@@ -133,8 +153,9 @@ const TestAssignDialog = ({ open, onOpenChange, test, currentUser }: TestAssignD
                   );
                 })
               )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <DialogFooter>
@@ -143,10 +164,10 @@ const TestAssignDialog = ({ open, onOpenChange, test, currentUser }: TestAssignD
           </Button>
           <Button 
             onClick={handleAssign}
-            disabled={selectedUsers.length === 0}
+            disabled={!assignToAll && selectedUsers.length === 0}
           >
             <Icon name="Check" size={16} className="mr-2" />
-            Назначить ({selectedUsers.length})
+            Назначить {assignToAll ? `(всем: ${users.length})` : `(${selectedUsers.length})`}
           </Button>
         </DialogFooter>
       </DialogContent>

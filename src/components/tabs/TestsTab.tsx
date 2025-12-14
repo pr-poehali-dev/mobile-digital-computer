@@ -5,11 +5,12 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
 import { type User } from '@/lib/auth';
-import { getAllTests, getAllTestAssignments, getTestStatistics, deleteTest, type Test } from '@/lib/store';
+import { getAllTests, getAllTestAssignments, getTestStatistics, deleteTest, type Test, type TestAssignment } from '@/lib/store';
 import { useSync } from '@/hooks/use-sync';
 import { useToast } from '@/hooks/use-toast';
 import TestCreatorDialog from '@/components/TestCreatorDialog';
 import TestAssignDialog from '@/components/TestAssignDialog';
+import TestResultsDialog from '@/components/TestResultsDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface TestsTabProps {
@@ -18,10 +19,12 @@ interface TestsTabProps {
 
 const TestsTab = ({ currentUser }: TestsTabProps) => {
   const [tests, setTests] = useState<Test[]>([]);
-  const [activeTab, setActiveTab] = useState<'all' | 'my'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'my' | 'results'>('all');
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [selectedTest, setSelectedTest] = useState<Test | null>(null);
+  const [resultsOpen, setResultsOpen] = useState(false);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; testId: string | null }>({ open: false, testId: null });
   const { toast } = useToast();
 
@@ -51,7 +54,29 @@ const TestsTab = ({ currentUser }: TestsTabProps) => {
   };
 
   const myTests = tests.filter(t => t.createdBy === currentUser?.id);
+  const allAssignments = getAllTestAssignments();
+  
   const displayTests = activeTab === 'my' ? myTests : tests;
+  
+  const handleViewResults = (assignmentId: string) => {
+    setSelectedAssignmentId(assignmentId);
+    setResultsOpen(true);
+  };
+
+  const getStatusBadge = (status: TestAssignment['status']) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="secondary">Ожидает</Badge>;
+      case 'in-progress':
+        return <Badge variant="default">Выполняется</Badge>;
+      case 'completed':
+        return <Badge variant="outline">На проверке</Badge>;
+      case 'passed':
+        return <Badge className="bg-success text-white">Пройден</Badge>;
+      case 'failed':
+        return <Badge variant="destructive">Не пройден</Badge>;
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -110,25 +135,24 @@ const TestsTab = ({ currentUser }: TestsTabProps) => {
         </Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'all' | 'my')}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'all' | 'my' | 'results')}>
         <TabsList>
           <TabsTrigger value="all">Все тесты</TabsTrigger>
           <TabsTrigger value="my">Мои тесты</TabsTrigger>
+          <TabsTrigger value="results">Результаты ({allAssignments.length})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="mt-6">
+        <TabsContent value="all" className="mt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {displayTests.length === 0 ? (
               <Card className="col-span-full">
                 <CardContent className="py-12 text-center">
                   <Icon name="FileQuestion" size={48} className="mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">
-                    {activeTab === 'my' ? 'Вы еще не создали ни одного теста' : 'Нет доступных тестов'}
-                  </p>
+                  <p className="text-muted-foreground">Нет доступных тестов</p>
                 </CardContent>
               </Card>
             ) : (
-              displayTests.map(test => {
+              tests.map(test => {
                 const stats = getTestStatistics(test.id);
                 return (
                   <Card key={test.id}>
@@ -190,6 +214,129 @@ const TestsTab = ({ currentUser }: TestsTabProps) => {
             )}
           </div>
         </TabsContent>
+
+        <TabsContent value="my" className="mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {myTests.length === 0 ? (
+              <Card className="col-span-full">
+                <CardContent className="py-12 text-center">
+                  <Icon name="FileQuestion" size={48} className="mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Вы еще не создали ни одного теста</p>
+                </CardContent>
+              </Card>
+            ) : (
+              myTests.map(test => {
+                const stats = getTestStatistics(test.id);
+                return (
+                  <Card key={test.id}>
+                    <CardHeader>
+                      <CardTitle className="flex items-start justify-between">
+                        <span className="line-clamp-2">{test.title}</span>
+                        {test.requiresManualCheck && (
+                          <Badge variant="secondary" className="ml-2 shrink-0">
+                            <Icon name="Eye" size={12} className="mr-1" />
+                            Ручная проверка
+                          </Badge>
+                        )}
+                      </CardTitle>
+                      <CardDescription className="line-clamp-2">{test.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">Вопросов</p>
+                          <p className="font-semibold">{test.questions.length}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Проходной балл</p>
+                          <p className="font-semibold">{test.passingScore}%</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Назначено</p>
+                          <p className="font-semibold">{stats.total}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Пройдено</p>
+                          <p className="font-semibold text-success">{stats.passed}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={() => handleAssign(test)} 
+                          size="sm" 
+                          className="flex-1"
+                        >
+                          <Icon name="UserPlus" size={14} className="mr-1" />
+                          Назначить
+                        </Button>
+                        {test.createdBy === currentUser?.id && (
+                          <Button 
+                            onClick={() => setDeleteDialog({ open: true, testId: test.id })} 
+                            size="sm" 
+                            variant="outline"
+                          >
+                            <Icon name="Trash2" size={14} />
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="results" className="mt-6">
+          <div className="space-y-4">
+            {allAssignments.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Icon name="FileText" size={48} className="mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Нет результатов тестов</p>
+                </CardContent>
+              </Card>
+            ) : (
+              allAssignments.map(assignment => {
+                const test = tests.find(t => t.id === assignment.testId);
+                if (!test) return null;
+                
+                return (
+                  <Card key={assignment.id}>
+                    <CardContent className="py-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold">{test.title}</h3>
+                            {getStatusBadge(assignment.status)}
+                          </div>
+                          <div className="flex gap-4 text-sm text-muted-foreground">
+                            <span>ID пользователя: {assignment.userId}</span>
+                            <span>Назначен: {new Date(assignment.assignedAt).toLocaleDateString('ru-RU')}</span>
+                            {assignment.score !== undefined && (
+                              <span className={assignment.score >= test.passingScore ? 'text-success font-semibold' : 'text-destructive font-semibold'}>
+                                {assignment.score.toFixed(1)}%
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleViewResults(assignment.id)}
+                        >
+                          <Icon name="Eye" size={14} className="mr-1" />
+                          Просмотр
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            )}
+          </div>
+        </TabsContent>
       </Tabs>
 
       <TestCreatorDialog 
@@ -204,6 +351,14 @@ const TestsTab = ({ currentUser }: TestsTabProps) => {
         onOpenChange={setAssignOpen}
         test={selectedTest}
         currentUser={currentUser}
+      />
+
+      <TestResultsDialog
+        open={resultsOpen}
+        onOpenChange={setResultsOpen}
+        assignmentId={selectedAssignmentId}
+        currentUser={currentUser}
+        canReview={true}
       />
 
       <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, testId: null })}>
