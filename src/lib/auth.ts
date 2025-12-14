@@ -83,7 +83,9 @@ export const authenticate = async (userId: string, password: string): Promise<{ 
   if (userData.pendingActivation) {
     return {
       success: false,
-      error: '\u0412\u0430\u0448 \u0430\u043a\u043a\u0430\u0443\u043d\u0442 \u043e\u0436\u0438\u0434\u0430\u0435\u0442 \u0430\u043a\u0442\u0438\u0432\u0430\u0446\u0438\u0438 \u043c\u0435\u043d\u0435\u0434\u0436\u0435\u0440\u043e\u043c. \u041f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430, \u043f\u043e\u0434\u043e\u0436\u0434\u0438\u0442\u0435.'\n    };\n  }\n  
+      error: 'Ваш аккаунт ожидает активации менеджером. Пожалуйста, подождите.'
+    };
+  }\n  
   if (userData.frozen) {
     if (userData.frozenBySystem && userData.role === 'dispatcher') {
       return {
