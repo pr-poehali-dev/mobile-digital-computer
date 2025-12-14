@@ -272,7 +272,7 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
               </Badge>
             </div>
 
-            <p className="text-lg font-medium screenshot-protected">{currentQuestion.text}</p>
+            <p className="text-lg font-medium">{currentQuestion.text}</p>
           </div>
 
           <div className="space-y-3">
@@ -284,7 +284,7 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
                 {currentQuestion.options?.map((option, index) => (
                   <div key={index} className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50">
                     <RadioGroupItem value={index.toString()} id={`option-${index}`} />
-                    <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer screenshot-protected">
+                    <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
                       {option}
                     </Label>
                   </div>
@@ -307,7 +307,7 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
                         handleAnswer(updated);
                       }}
                     />
-                    <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer screenshot-protected">
+                    <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
                       {option}
                     </Label>
                   </div>
