@@ -151,6 +151,9 @@ export interface Test {
   showAnswers: ShowAnswersMode; // Когда показывать правильные ответы
   createdBy: string;
   createdAt: string;
+  randomizeQuestions?: boolean; // Рандомизировать порядок вопросов
+  randomizeOptions?: boolean; // Рандомизировать порядок вариантов ответов
+  questionBankSize?: number; // Размер банка вопросов (если указан, выбирается N случайных из всех)
 }
 
 export interface TestAssignment {
@@ -167,6 +170,9 @@ export interface TestAssignment {
   answers?: TestAnswer[];
   reviewedBy?: string;
   reviewedAt?: string;
+  selectedQuestionIds?: string[]; // Список ID вопросов, выбранных для этого прохождения (для банка вопросов)
+  questionOrder?: string[]; // Порядок вопросов для этого прохождения (для рандомизации)
+  optionsOrder?: Record<string, number[]>; // Порядок вариантов для каждого вопроса (для рандомизации)
 }
 
 export interface TestAnswer {
@@ -1684,13 +1690,54 @@ export const assignTest = (testId: string, userId: string, assignedBy: string, d
   return newAssignment;
 };
 
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+};
+
 export const startTestAttempt = (assignmentId: string): boolean => {
   const assignments = getAllTestAssignments();
   const assignment = assignments.find(a => a.id === assignmentId);
   if (!assignment || assignment.status !== 'pending') return false;
   
+  const test = getTestById(assignment.testId);
+  if (!test) return false;
+
+  // Рандомизация вопросов (если включена)
+  let selectedQuestions = [...test.questions];
+  
+  // Банк вопросов: выбираем случайное подмножество
+  if (test.questionBankSize && test.questionBankSize < selectedQuestions.length) {
+    selectedQuestions = shuffleArray(selectedQuestions).slice(0, test.questionBankSize);
+  }
+  
+  // Рандомизация порядка вопросов
+  let questionOrder = selectedQuestions.map(q => q.id);
+  if (test.randomizeQuestions) {
+    questionOrder = shuffleArray(questionOrder);
+  }
+  
+  // Рандомизация вариантов ответов для каждого вопроса
+  const optionsOrder: Record<string, number[]> = {};
+  if (test.randomizeOptions) {
+    selectedQuestions.forEach(q => {
+      if (q.type !== 'text' && q.options) {
+        const indices = q.options.map((_, i) => i);
+        optionsOrder[q.id] = shuffleArray(indices);
+      }
+    });
+  }
+  
   assignment.status = 'in-progress';
   assignment.startedAt = new Date().toISOString();
+  assignment.selectedQuestionIds = selectedQuestions.map(q => q.id);
+  assignment.questionOrder = questionOrder;
+  assignment.optionsOrder = Object.keys(optionsOrder).length > 0 ? optionsOrder : undefined;
+  
   storage.set(KEYS.TEST_ASSIGNMENTS, assignments);
   syncManager.notify('test_assignments_updated');
   return true;

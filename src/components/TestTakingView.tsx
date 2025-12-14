@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import Icon from '@/components/ui/icon';
-import { getTestById, startTestAttempt, submitTestAnswers, type TestAssignment, type TestAnswer } from '@/lib/store';
+import { getTestById, startTestAttempt, submitTestAnswers, type TestAssignment, type TestAnswer, type Question } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
@@ -25,10 +25,45 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [started, setStarted] = useState(false);
   const [submitDialog, setSubmitDialog] = useState(false);
+  const [orderedQuestions, setOrderedQuestions] = useState<Question[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const test = getTestById(assignment.testId);
+
+  // Применяем рандомизацию к вопросам и вариантам при старте
+  useEffect(() => {
+    if (!test || !started) return;
+
+    let questions = [...test.questions];
+
+    // Фильтруем вопросы по банку (если есть)
+    if (assignment.selectedQuestionIds) {
+      questions = questions.filter(q => assignment.selectedQuestionIds!.includes(q.id));
+    }
+
+    // Применяем порядок вопросов
+    if (assignment.questionOrder) {
+      const orderMap = new Map(questions.map(q => [q.id, q]));
+      questions = assignment.questionOrder.map(id => orderMap.get(id)!).filter(Boolean);
+    }
+
+    // Применяем рандомизацию вариантов ответов
+    if (assignment.optionsOrder) {
+      questions = questions.map(q => {
+        if (q.type === 'text' || !q.options || !assignment.optionsOrder![q.id]) {
+          return q;
+        }
+        
+        const order = assignment.optionsOrder![q.id];
+        const newOptions = order.map(i => q.options![i]);
+        
+        return { ...q, options: newOptions };
+      });
+    }
+
+    setOrderedQuestions(questions);
+  }, [test, started, assignment]);
 
   useEffect(() => {
     // Усиленная защита от копирования
@@ -114,10 +149,10 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
   }, [toast]);
 
   useEffect(() => {
-    if (!started || !test) return;
+    if (!started || !test || orderedQuestions.length === 0) return;
 
-    const currentQuestion = test.questions[currentQuestionIndex];
-    if (currentQuestion.timeLimit) {
+    const currentQuestion = orderedQuestions[currentQuestionIndex];
+    if (currentQuestion?.timeLimit) {
       setTimeLeft(currentQuestion.timeLimit);
 
       const interval = setInterval(() => {
@@ -132,7 +167,7 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
 
       return () => clearInterval(interval);
     }
-  }, [currentQuestionIndex, started, test]);
+  }, [currentQuestionIndex, started, test, orderedQuestions]);
 
   if (!test) {
     return (
@@ -144,8 +179,10 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
     );
   }
 
-  const currentQuestion = test.questions[currentQuestionIndex];
-  const currentAnswer = answers.find(a => a.questionId === currentQuestion.id);
+  const currentQuestion = started && orderedQuestions.length > 0 
+    ? orderedQuestions[currentQuestionIndex] 
+    : test?.questions[currentQuestionIndex];
+  const currentAnswer = currentQuestion ? answers.find(a => a.questionId === currentQuestion.id) : undefined;
 
   const handleStart = () => {
     startTestAttempt(assignment.id);
@@ -168,10 +205,11 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
   };
 
   const handleNext = () => {
-    if (currentQuestionIndex < test.questions.length - 1) {
+    const questions = started ? orderedQuestions : test?.questions || [];
+    if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
       setQuestionStartTime(Date.now());
-      setTimeLeft(test.questions[currentQuestionIndex + 1].timeLimit || null);
+      setTimeLeft(questions[currentQuestionIndex + 1]?.timeLimit || null);
     } else {
       setSubmitDialog(true);
     }
@@ -179,9 +217,10 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
 
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
+      const questions = started ? orderedQuestions : test?.questions || [];
       setCurrentQuestionIndex(prev => prev - 1);
       setQuestionStartTime(Date.now());
-      setTimeLeft(test.questions[currentQuestionIndex - 1].timeLimit || null);
+      setTimeLeft(questions[currentQuestionIndex - 1]?.timeLimit || null);
     }
   };
 
@@ -241,7 +280,8 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
     );
   }
 
-  const progress = ((currentQuestionIndex + 1) / test.questions.length) * 100;
+  const totalQuestions = started && orderedQuestions.length > 0 ? orderedQuestions.length : test?.questions.length || 0;
+  const progress = totalQuestions > 0 ? ((currentQuestionIndex + 1) / totalQuestions) * 100 : 0;
   const answeredCount = answers.length;
 
   return (
@@ -250,7 +290,7 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg select-none">
-              Вопрос {currentQuestionIndex + 1} из {test.questions.length}
+              Вопрос {currentQuestionIndex + 1} из {totalQuestions}
             </CardTitle>
             {timeLeft !== null && (
               <Badge variant={timeLeft < 10 ? 'destructive' : 'secondary'} className="text-lg px-3 select-none">
@@ -336,10 +376,10 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
             </Button>
 
             <p className="text-sm text-muted-foreground">
-              Отвечено: {answeredCount} / {test.questions.length}
+              Отвечено: {answeredCount} / {totalQuestions}
             </p>
 
-            {currentQuestionIndex < test.questions.length - 1 ? (
+            {currentQuestionIndex < totalQuestions - 1 ? (
               <Button onClick={handleNext}>
                 Далее
                 <Icon name="ChevronRight" size={16} className="ml-2" />
@@ -359,7 +399,7 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
           <AlertDialogHeader>
             <AlertDialogTitle>Завершить тест?</AlertDialogTitle>
             <AlertDialogDescription>
-              Вы ответили на {answeredCount} из {test.questions.length} вопросов.
+              Вы ответили на {answeredCount} из {totalQuestions} вопросов.
               После отправки изменить ответы будет невозможно.
             </AlertDialogDescription>
           </AlertDialogHeader>

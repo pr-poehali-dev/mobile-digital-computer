@@ -24,7 +24,15 @@ interface TestCreatorDialogProps {
 
 const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSuccess }: TestCreatorDialogProps) => {
   const [step, setStep] = useState<'info' | 'questions'>('info');
-  const [testInfo, setTestInfo] = useState({ title: '', description: '', passingScore: 70, showAnswers: 'after-completion' as ShowAnswersMode });
+  const [testInfo, setTestInfo] = useState({ 
+    title: '', 
+    description: '', 
+    passingScore: 70, 
+    showAnswers: 'after-completion' as ShowAnswersMode,
+    randomizeQuestions: false,
+    randomizeOptions: false,
+    questionBankSize: undefined as number | undefined
+  });
   const [questions, setQuestions] = useState<Question[]>([]);
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<Partial<Question>>({
@@ -41,7 +49,10 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
         title: editTest.title,
         description: editTest.description,
         passingScore: editTest.passingScore,
-        showAnswers: editTest.showAnswers || 'after-completion'
+        showAnswers: editTest.showAnswers || 'after-completion',
+        randomizeQuestions: editTest.randomizeQuestions || false,
+        randomizeOptions: editTest.randomizeOptions || false,
+        questionBankSize: editTest.questionBankSize
       });
       setQuestions(editTest.questions);
       setStep('info');
@@ -181,7 +192,10 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
         questions,
         passingScore: testInfo.passingScore,
         showAnswers: testInfo.showAnswers,
-        requiresManualCheck
+        requiresManualCheck,
+        randomizeQuestions: testInfo.randomizeQuestions,
+        randomizeOptions: testInfo.randomizeOptions,
+        questionBankSize: testInfo.questionBankSize
       });
 
       toast({
@@ -195,7 +209,10 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
         questions,
         passingScore: testInfo.passingScore,
         showAnswers: testInfo.showAnswers,
-        requiresManualCheck
+        requiresManualCheck,
+        randomizeQuestions: testInfo.randomizeQuestions,
+        randomizeOptions: testInfo.randomizeOptions,
+        questionBankSize: testInfo.questionBankSize
       }, currentUser.id);
 
       toast({
@@ -210,7 +227,15 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
 
   const handleClose = () => {
     setStep('info');
-    setTestInfo({ title: '', description: '', passingScore: 70, showAnswers: 'after-completion' });
+    setTestInfo({ 
+      title: '', 
+      description: '', 
+      passingScore: 70, 
+      showAnswers: 'after-completion',
+      randomizeQuestions: false,
+      randomizeOptions: false,
+      questionBankSize: undefined
+    });
     setQuestions([]);
     setEditingQuestionId(null);
     setCurrentQuestion({
@@ -305,6 +330,56 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
                   <SelectItem value="never">Не показывать</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="border-t pt-4 space-y-4">
+              <h3 className="font-medium flex items-center gap-2">
+                <Icon name="Shuffle" size={16} />
+                Настройки рандомизации
+              </h3>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="randomizeQuestions"
+                  checked={testInfo.randomizeQuestions}
+                  onCheckedChange={(checked) => setTestInfo({ ...testInfo, randomizeQuestions: !!checked })}
+                />
+                <Label htmlFor="randomizeQuestions" className="cursor-pointer">
+                  Перемешивать порядок вопросов для каждого студента
+                </Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="randomizeOptions"
+                  checked={testInfo.randomizeOptions}
+                  onCheckedChange={(checked) => setTestInfo({ ...testInfo, randomizeOptions: !!checked })}
+                />
+                <Label htmlFor="randomizeOptions" className="cursor-pointer">
+                  Перемешивать порядок вариантов ответов
+                </Label>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="questionBankSize">Банк вопросов (опционально)</Label>
+                  <Badge variant="outline" className="text-xs">PRO</Badge>
+                </div>
+                <Input
+                  id="questionBankSize"
+                  type="number"
+                  min="0"
+                  placeholder="Оставьте пустым или укажите количество"
+                  value={testInfo.questionBankSize || ''}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? undefined : parseInt(e.target.value);
+                    setTestInfo({ ...testInfo, questionBankSize: val });
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Если указано, каждый студент получит N случайных вопросов из всех добавленных
+                </p>
+              </div>
             </div>
           </div>
         ) : (
