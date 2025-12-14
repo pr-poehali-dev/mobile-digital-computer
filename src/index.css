@@ -111,4 +111,19 @@
   .pointer-events-none {
     pointer-events: none !important;
   }
+
+  .screenshot-protected {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    color: transparent !important;
+    text-shadow: 0 0 8px rgba(0, 0, 0, 0.5) !important;
+  }
+
+  @media print {
+    .screenshot-protected {
+      display: none !important;
+    }
+  }
 }
