@@ -63,18 +63,21 @@ const initializeUsers = () => {
 
 initializeUsers();
 
-export const authenticate = async (userId: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
+export const authenticate = async (userIdOrEmail: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
   await new Promise(resolve => setTimeout(resolve, 500));
 
   const usersData = localStorage.getItem('mdc_users');
   const users = usersData ? JSON.parse(usersData) : USERS_DB;
   
-  const userWithPassword = users.find((u: any) => u.id === userId && u.password === password);
+  const userWithPassword = users.find((u: any) => 
+    (u.id === userIdOrEmail || u.email.toLowerCase() === userIdOrEmail.toLowerCase()) && 
+    u.password === password
+  );
 
   if (!userWithPassword) {
     return {
       success: false,
-      error: 'Неверный ID или пароль'
+      error: 'Неверный ID/Email или пароль'
     };
   }
 

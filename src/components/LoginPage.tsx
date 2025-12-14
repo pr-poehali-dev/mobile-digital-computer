@@ -65,16 +65,14 @@ const LoginPage = ({ onLogin, onRegister }: LoginPageProps) => {
             )}
             
             <div className="space-y-2">
-              <Label htmlFor="userId">ID</Label>
+              <Label htmlFor="userId">ID или Email</Label>
               <Input
                 id="userId"
                 type="text"
-                placeholder="Введите ID (5 цифр)"
+                placeholder="Введите ID или Email"
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
                 disabled={isLoading}
-                maxLength={5}
-                pattern="[0-9]{5}"
                 required
               />
             </div>
