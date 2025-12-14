@@ -31,36 +31,84 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
   const test = getTestById(assignment.testId);
 
   useEffect(() => {
-    // Защита от копирования
-    const preventCopy = (e: Event) => {
+    // Усиленная защита от копирования
+    const preventCopy = (e: ClipboardEvent) => {
       e.preventDefault();
+      e.stopPropagation();
+      if (e.clipboardData) {
+        e.clipboardData.setData('text/plain', '');
+      }
       toast({
         title: 'Копирование запрещено',
         description: 'Копирование содержимого теста не разрешено',
         variant: 'destructive'
       });
+      return false;
     };
 
-    const preventContextMenu = (e: Event) => {
+    const preventContextMenu = (e: MouseEvent) => {
       e.preventDefault();
+      e.stopPropagation();
+      return false;
+    };
+
+    const preventKeyboardCopy = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C' || e.key === 'x' || e.key === 'X' || e.key === 'a' || e.key === 'A')) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.key === 'c' || e.key === 'C' || e.key === 'x' || e.key === 'X') {
+          toast({
+            title: 'Копирование запрещено',
+            description: 'Копирование содержимого теста не разрешено',
+            variant: 'destructive'
+          });
+        }
+        return false;
+      }
+    };
+
+    const preventDragStart = (e: DragEvent) => {
+      e.preventDefault();
+      return false;
     };
 
     const container = containerRef.current;
     if (container) {
-      container.addEventListener('copy', preventCopy);
-      container.addEventListener('cut', preventCopy);
-      container.addEventListener('contextmenu', preventContextMenu);
+      // События на контейнере
+      container.addEventListener('copy', preventCopy as EventListener);
+      container.addEventListener('cut', preventCopy as EventListener);
+      container.addEventListener('contextmenu', preventContextMenu as EventListener);
+      container.addEventListener('dragstart', preventDragStart as EventListener);
+      container.addEventListener('selectstart', preventContextMenu as EventListener);
+      
+      // Глобальные события клавиатуры
+      document.addEventListener('keydown', preventKeyboardCopy as EventListener);
+      document.addEventListener('copy', preventCopy as EventListener);
+      document.addEventListener('cut', preventCopy as EventListener);
 
-      // Запрет выделения текста
+      // CSS стили
       container.style.userSelect = 'none';
       container.style.webkitUserSelect = 'none';
+      container.style.webkitTouchCallout = 'none';
+      container.style.msUserSelect = 'none';
+      container.style.mozUserSelect = 'none';
 
       return () => {
-        container.removeEventListener('copy', preventCopy);
-        container.removeEventListener('cut', preventCopy);
-        container.removeEventListener('contextmenu', preventContextMenu);
+        container.removeEventListener('copy', preventCopy as EventListener);
+        container.removeEventListener('cut', preventCopy as EventListener);
+        container.removeEventListener('contextmenu', preventContextMenu as EventListener);
+        container.removeEventListener('dragstart', preventDragStart as EventListener);
+        container.removeEventListener('selectstart', preventContextMenu as EventListener);
+        
+        document.removeEventListener('keydown', preventKeyboardCopy as EventListener);
+        document.removeEventListener('copy', preventCopy as EventListener);
+        document.removeEventListener('cut', preventCopy as EventListener);
+        
         container.style.userSelect = '';
         container.style.webkitUserSelect = '';
+        container.style.webkitTouchCallout = '';
+        container.style.msUserSelect = '';
+        container.style.mozUserSelect = '';
       };
     }
   }, [toast]);
@@ -197,15 +245,15 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
   const answeredCount = answers.length;
 
   return (
-    <div ref={containerRef}>
+    <div ref={containerRef} className="select-none">
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">
+            <CardTitle className="text-lg select-none">
               Вопрос {currentQuestionIndex + 1} из {test.questions.length}
             </CardTitle>
             {timeLeft !== null && (
-              <Badge variant={timeLeft < 10 ? 'destructive' : 'secondary'} className="text-lg px-3">
+              <Badge variant={timeLeft < 10 ? 'destructive' : 'secondary'} className="text-lg px-3 select-none">
                 <Icon name="Clock" size={14} className="mr-1" />
                 {timeLeft}с
               </Badge>
@@ -216,15 +264,15 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
         <CardContent className="space-y-6">
           <div className="space-y-4">
             <div className="flex gap-2 items-start">
-              <Badge variant="outline">{currentQuestion.points} балл(ов)</Badge>
-              <Badge variant="outline">
+              <Badge variant="outline" className="select-none">{currentQuestion.points} балл(ов)</Badge>
+              <Badge variant="outline" className="select-none">
                 {currentQuestion.type === 'single' ? 'Одиночный выбор' : 
                  currentQuestion.type === 'multiple' ? 'Множественный выбор' : 
                  'Текстовый ответ'}
               </Badge>
             </div>
 
-            <p className="text-lg font-medium">{currentQuestion.text}</p>
+            <p className="text-lg font-medium select-none pointer-events-none">{currentQuestion.text}</p>
           </div>
 
           <div className="space-y-3">
@@ -236,7 +284,7 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
                 {currentQuestion.options?.map((option, index) => (
                   <div key={index} className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50">
                     <RadioGroupItem value={index.toString()} id={`option-${index}`} />
-                    <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
+                    <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer select-none">
                       {option}
                     </Label>
                   </div>
@@ -259,7 +307,7 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
                         handleAnswer(updated);
                       }}
                     />
-                    <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
+                    <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer select-none">
                       {option}
                     </Label>
                   </div>
