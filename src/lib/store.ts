@@ -480,6 +480,21 @@ export const changeUserId = (oldUserId: string, newUserId: string): boolean => {
   return true;
 };
 
+export const changeUserPassword = async (userId: string, newPassword: string): Promise<boolean> => {
+  const bcrypt = (await import('bcryptjs')).default;
+  const passwordsData = localStorage.getItem(KEYS.USERS_PASSWORDS);
+  const users = passwordsData ? JSON.parse(passwordsData) : [];
+  
+  const userIndex = users.findIndex((u: any) => u.id === userId);
+  if (userIndex === -1) return false;
+  
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  users[userIndex].passwordHash = passwordHash;
+  
+  localStorage.setItem(KEYS.USERS_PASSWORDS, JSON.stringify(users));
+  return true;
+};
+
 // ============================================================================
 // CREWS STORAGE (TEMPORARY LOCAL MODE)
 // ============================================================================

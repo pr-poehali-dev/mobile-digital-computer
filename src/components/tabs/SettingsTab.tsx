@@ -11,6 +11,7 @@ import { type User } from '@/lib/auth';
 import { getUserSettings, updateUserSettings, getSystemLockdown, activateSystemLockdown, deactivateSystemLockdown, getSystemRestrictions, updateSystemRestrictions } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { useSync } from '@/hooks/use-sync';
+import ChangePasswordDialog from '@/components/ChangePasswordDialog';
 
 interface SettingsTabProps {
   currentUser: User | null;
@@ -27,6 +28,7 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
   const [panicButtonDisabled, setPanicButtonDisabled] = useState(false);
   const [mdtSystemDisabled, setMdtSystemDisabled] = useState(false);
   const [survSystemEnabled, setSurvSystemEnabled] = useState(false);
+  const [passwordDialog, setPasswordDialog] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -200,10 +202,19 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
               <Input id="email" type="email" value={currentUser?.email || ''} placeholder="user@example.com" />
             </div>
           </div>
-          <Button>
-            <Icon name="Save" size={16} className="mr-2" />
-            Сохранить изменения
-          </Button>
+          <div className="flex gap-2">
+            <Button>
+              <Icon name="Save" size={16} className="mr-2" />
+              Сохранить изменения
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => setPasswordDialog(true)}
+            >
+              <Icon name="KeyRound" size={16} className="mr-2" />
+              Изменить пароль
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -495,6 +506,15 @@ const SettingsTab = ({ currentUser }: SettingsTabProps) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {currentUser && (
+        <ChangePasswordDialog
+          open={passwordDialog}
+          onOpenChange={setPasswordDialog}
+          userId={currentUser.id}
+          userName={currentUser.fullName}
+        />
+      )}
     </div>
   );
 };

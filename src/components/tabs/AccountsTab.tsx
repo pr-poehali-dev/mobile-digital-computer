@@ -14,6 +14,7 @@ import { type User } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { sanitizeName, sanitizeEmail, sanitizeId } from '@/lib/sanitize';
 import { canFreezeUser } from '@/lib/permissions';
+import ChangePasswordDialog from '@/components/ChangePasswordDialog';
 
 interface AccountsTabProps {
   currentUser: User | null;
@@ -51,6 +52,10 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
     open: false, 
     user: null, 
     action: 'freeze' 
+  });
+  const [passwordDialog, setPasswordDialog] = useState<{ open: boolean; user: User | null }>({ 
+    open: false, 
+    user: null 
   });
   const [formData, setFormData] = useState({
     userId: '',
@@ -566,6 +571,15 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
                       <Button 
                         variant="ghost" 
                         size="icon" 
+                        onClick={() => setPasswordDialog({ open: true, user })}
+                        disabled={!canEditUser(user)}
+                        title="Изменить пароль"
+                      >
+                        <Icon name="KeyRound" size={16} className="text-primary" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
                         onClick={() => handleEdit(user)}
                         disabled={!canEditUser(user)}
                       >
@@ -790,6 +804,13 @@ const AccountsTab = ({ currentUser }: AccountsTabProps) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ChangePasswordDialog
+        open={passwordDialog.open}
+        onOpenChange={(open) => setPasswordDialog({ open, user: null })}
+        userId={passwordDialog.user?.id || ''}
+        userName={passwordDialog.user?.fullName || ''}
+      />
     </div>
   );
 };
