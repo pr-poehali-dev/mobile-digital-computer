@@ -41,12 +41,14 @@ const Signal100Alert = ({ currentUser }: Signal100AlertProps) => {
     oscillator.frequency.value = 440;
     oscillator.type = 'sine';
 
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime + 1.99);
-    gainNode.gain.setValueAtTime(0, audioContext.currentTime + 2);
+    const now = audioContext.currentTime;
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(0.3, now + 0.05);
+    gainNode.gain.setValueAtTime(0.3, now + 1.8);
+    gainNode.gain.linearRampToValueAtTime(0, now + 2);
 
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 2);
+    oscillator.start(now);
+    oscillator.stop(now + 2);
   };
 
   useEffect(() => {
