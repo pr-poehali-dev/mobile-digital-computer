@@ -23,6 +23,7 @@ const TestsTab = ({ currentUser }: TestsTabProps) => {
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [selectedTest, setSelectedTest] = useState<Test | null>(null);
+  const [editingTest, setEditingTest] = useState<Test | null>(null);
   const [resultsOpen, setResultsOpen] = useState(false);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; testId: string | null }>({ open: false, testId: null });
@@ -51,6 +52,11 @@ const TestsTab = ({ currentUser }: TestsTabProps) => {
   const handleAssign = (test: Test) => {
     setSelectedTest(test);
     setAssignOpen(true);
+  };
+
+  const handleEdit = (test: Test) => {
+    setEditingTest(test);
+    setCreatorOpen(true);
   };
 
   const myTests = tests.filter(t => t.createdBy === currentUser?.id);
@@ -85,7 +91,10 @@ const TestsTab = ({ currentUser }: TestsTabProps) => {
           <h2 className="text-3xl font-bold">Система тестирования</h2>
           <p className="text-muted-foreground mt-1">Создание и управление тестами для сотрудников</p>
         </div>
-        <Button onClick={() => setCreatorOpen(true)}>
+        <Button onClick={() => {
+          setEditingTest(null);
+          setCreatorOpen(true);
+        }}>
           <Icon name="Plus" size={16} className="mr-2" />
           Создать тест
         </Button>
@@ -198,13 +207,22 @@ const TestsTab = ({ currentUser }: TestsTabProps) => {
                           Назначить
                         </Button>
                         {test.createdBy === currentUser?.id && (
-                          <Button 
-                            onClick={() => setDeleteDialog({ open: true, testId: test.id })} 
-                            size="sm" 
-                            variant="outline"
-                          >
-                            <Icon name="Trash2" size={14} />
-                          </Button>
+                          <>
+                            <Button 
+                              onClick={() => handleEdit(test)} 
+                              size="sm" 
+                              variant="outline"
+                            >
+                              <Icon name="Pencil" size={14} />
+                            </Button>
+                            <Button 
+                              onClick={() => setDeleteDialog({ open: true, testId: test.id })} 
+                              size="sm" 
+                              variant="outline"
+                            >
+                              <Icon name="Trash2" size={14} />
+                            </Button>
+                          </>
                         )}
                       </div>
                     </CardContent>
@@ -271,13 +289,22 @@ const TestsTab = ({ currentUser }: TestsTabProps) => {
                           Назначить
                         </Button>
                         {test.createdBy === currentUser?.id && (
-                          <Button 
-                            onClick={() => setDeleteDialog({ open: true, testId: test.id })} 
-                            size="sm" 
-                            variant="outline"
-                          >
-                            <Icon name="Trash2" size={14} />
-                          </Button>
+                          <>
+                            <Button 
+                              onClick={() => handleEdit(test)} 
+                              size="sm" 
+                              variant="outline"
+                            >
+                              <Icon name="Pencil" size={14} />
+                            </Button>
+                            <Button 
+                              onClick={() => setDeleteDialog({ open: true, testId: test.id })} 
+                              size="sm" 
+                              variant="outline"
+                            >
+                              <Icon name="Trash2" size={14} />
+                            </Button>
+                          </>
                         )}
                       </div>
                     </CardContent>
@@ -341,8 +368,12 @@ const TestsTab = ({ currentUser }: TestsTabProps) => {
 
       <TestCreatorDialog 
         open={creatorOpen} 
-        onOpenChange={setCreatorOpen}
+        onOpenChange={(open) => {
+          setCreatorOpen(open);
+          if (!open) setEditingTest(null);
+        }}
         currentUser={currentUser}
+        editTest={editingTest}
         onSuccess={loadTests}
       />
 

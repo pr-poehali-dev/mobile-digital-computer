@@ -10,17 +10,19 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import Icon from '@/components/ui/icon';
 import { type User } from '@/lib/auth';
-import { createTest, type Question, type QuestionType } from '@/lib/store';
+import { createTest, updateTest, type Question, type QuestionType, type Test } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
+import { useEffect } from 'react';
 
 interface TestCreatorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentUser: User | null;
+  editTest?: Test | null;
   onSuccess?: () => void;
 }
 
-const TestCreatorDialog = ({ open, onOpenChange, currentUser, onSuccess }: TestCreatorDialogProps) => {
+const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSuccess }: TestCreatorDialogProps) => {
   const [step, setStep] = useState<'info' | 'questions'>('info');
   const [testInfo, setTestInfo] = useState({ title: '', description: '', passingScore: 70 });
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -31,6 +33,18 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, onSuccess }: TestC
     correctAnswers: []
   });
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (open && editTest) {
+      setTestInfo({
+        title: editTest.title,
+        description: editTest.description,
+        passingScore: editTest.passingScore
+      });
+      setQuestions(editTest.questions);
+      setStep('info');
+    }
+  }, [open, editTest]);
 
   const handleAddQuestion = () => {
     if (!currentQuestion.text || currentQuestion.text.trim() === '') {
@@ -48,15 +62,6 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, onSuccess }: TestC
         toast({
           title: 'Ошибка',
           description: 'Добавьте минимум 2 варианта ответа',
-          variant: 'destructive'
-        });
-        return;
-      }
-
-      if (!currentQuestion.correctAnswers || currentQuestion.correctAnswers.length === 0) {
-        toast({
-          title: 'Ошибка',
-          description: 'Отметьте правильные ответы',
           variant: 'destructive'
         });
         return;
@@ -105,20 +110,38 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, onSuccess }: TestC
       return;
     }
 
-    const requiresManualCheck = questions.some(q => q.type === 'text');
+    const requiresManualCheck = questions.some(q => 
+      q.type === 'text' || 
+      (q.type !== 'text' && (!q.correctAnswers || q.correctAnswers.length === 0))
+    );
 
-    createTest({
-      title: testInfo.title,
-      description: testInfo.description,
-      questions,
-      passingScore: testInfo.passingScore,
-      requiresManualCheck
-    }, currentUser.id);
+    if (editTest) {
+      updateTest(editTest.id, {
+        title: testInfo.title,
+        description: testInfo.description,
+        questions,
+        passingScore: testInfo.passingScore,
+        requiresManualCheck
+      });
 
-    toast({
-      title: 'Тест создан',
-      description: `Тест "${testInfo.title}" успешно создан`
-    });
+      toast({
+        title: 'Тест обновлен',
+        description: `Тест "${testInfo.title}" успешно обновлен`
+      });
+    } else {
+      createTest({
+        title: testInfo.title,
+        description: testInfo.description,
+        questions,
+        passingScore: testInfo.passingScore,
+        requiresManualCheck
+      }, currentUser.id);
+
+      toast({
+        title: 'Тест создан',
+        description: `Тест "${testInfo.title}" успешно создан`
+      });
+    }
 
     handleClose();
     onSuccess?.();
@@ -163,7 +186,7 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, onSuccess }: TestC
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Icon name="FileText" size={20} />
-            {step === 'info' ? 'Создать тест' : 'Добавить вопросы'}
+            {editTest ? (step === 'info' ? 'Редактировать тест' : 'Редактировать вопросы') : (step === 'info' ? 'Создать тест' : 'Добавить вопросы')}
           </DialogTitle>
           <DialogDescription>
             {step === 'info' ? 'Укажите информацию о тесте' : `Добавлено вопросов: ${questions.length}`}
@@ -353,7 +376,7 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, onSuccess }: TestC
               </Button>
               <Button onClick={handleCreateTest} disabled={questions.length === 0}>
                 <Icon name="Check" size={16} className="mr-2" />
-                Создать тест
+                {editTest ? 'Сохранить изменения' : 'Создать тест'}
               </Button>
             </>
           )}

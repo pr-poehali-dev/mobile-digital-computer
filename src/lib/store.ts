@@ -1659,6 +1659,12 @@ export const submitTestAnswers = (assignmentId: string, answers: TestAnswer[]): 
     
     if (question.type === 'single' || question.type === 'multiple') {
       const correctAnswers = question.correctAnswers || [];
+      
+      if (correctAnswers.length === 0) {
+        requiresManualReview = true;
+        return answer;
+      }
+      
       const selectedOptions = answer.selectedOptions || [];
       
       const isCorrect = correctAnswers.length === selectedOptions.length &&
