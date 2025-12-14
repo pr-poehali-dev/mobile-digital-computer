@@ -1831,6 +1831,69 @@ export const deleteTestAssignment = (assignmentId: string): boolean => {
   return true;
 };
 
+export const resetTestAssignment = (assignmentId: string): boolean => {
+  const assignments = getAllTestAssignments();
+  const assignment = assignments.find(a => a.id === assignmentId);
+  if (!assignment) return false;
+  
+  assignment.status = 'pending';
+  assignment.startedAt = undefined;
+  assignment.completedAt = undefined;
+  assignment.score = undefined;
+  assignment.answers = undefined;
+  assignment.reviewedBy = undefined;
+  assignment.reviewedAt = undefined;
+  assignment.selectedQuestionIds = undefined;
+  assignment.questionOrder = undefined;
+  assignment.optionsOrder = undefined;
+  
+  storage.set(KEYS.TEST_ASSIGNMENTS, assignments);
+  syncManager.notify('test_assignments_updated');
+  return true;
+};
+
+export const deleteAllUserTestResults = (userId: string, testId?: string): boolean => {
+  const assignments = getAllTestAssignments();
+  let filteredAssignments: TestAssignment[];
+  
+  if (testId) {
+    filteredAssignments = assignments.filter(a => !(a.userId === userId && a.testId === testId));
+  } else {
+    filteredAssignments = assignments.filter(a => a.userId !== userId);
+  }
+  
+  storage.set(KEYS.TEST_ASSIGNMENTS, filteredAssignments);
+  syncManager.notify('test_assignments_updated');
+  return true;
+};
+
+export const resetAllUserTestResults = (userId: string, testId?: string): boolean => {
+  const assignments = getAllTestAssignments();
+  
+  assignments.forEach(assignment => {
+    const shouldReset = testId 
+      ? (assignment.userId === userId && assignment.testId === testId)
+      : (assignment.userId === userId);
+    
+    if (shouldReset) {
+      assignment.status = 'pending';
+      assignment.startedAt = undefined;
+      assignment.completedAt = undefined;
+      assignment.score = undefined;
+      assignment.answers = undefined;
+      assignment.reviewedBy = undefined;
+      assignment.reviewedAt = undefined;
+      assignment.selectedQuestionIds = undefined;
+      assignment.questionOrder = undefined;
+      assignment.optionsOrder = undefined;
+    }
+  });
+  
+  storage.set(KEYS.TEST_ASSIGNMENTS, assignments);
+  syncManager.notify('test_assignments_updated');
+  return true;
+};
+
 export const getTestStatistics = (testId: string) => {
   const assignments = getAllTestAssignments().filter(a => a.testId === testId);
   

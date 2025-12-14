@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
 import { type User } from '@/lib/auth';
-import { getAllTests, getAllTestAssignments, getTestStatistics, deleteTest, duplicateTest, type Test, type TestAssignment } from '@/lib/store';
+import { getAllTests, getAllTestAssignments, getTestStatistics, deleteTest, duplicateTest, resetTestAssignment, deleteTestAssignment, type Test, type TestAssignment } from '@/lib/store';
 import { useSync } from '@/hooks/use-sync';
 import { useToast } from '@/hooks/use-toast';
 import TestCreatorDialog from '@/components/TestCreatorDialog';
@@ -27,6 +27,8 @@ const TestsTab = ({ currentUser }: TestsTabProps) => {
   const [resultsOpen, setResultsOpen] = useState(false);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; testId: string | null }>({ open: false, testId: null });
+  const [resetDialog, setResetDialog] = useState<{ open: boolean; assignmentId: string | null }>({ open: false, assignmentId: null });
+  const [deleteResultDialog, setDeleteResultDialog] = useState<{ open: boolean; assignmentId: string | null }>({ open: false, assignmentId: null });
   const { toast } = useToast();
 
   const loadTests = () => {
@@ -80,6 +82,28 @@ const TestsTab = ({ currentUser }: TestsTabProps) => {
     setSelectedAssignmentId(assignmentId);
     setResultsOpen(true);
   };
+
+  const handleResetResult = (assignmentId: string) => {
+    resetTestAssignment(assignmentId);
+    setResetDialog({ open: false, assignmentId: null });
+    loadTests();
+    toast({
+      title: 'Результат обнулен',
+      description: 'Тест снова доступен для прохождения'
+    });
+  };
+
+  const handleDeleteResult = (assignmentId: string) => {
+    deleteTestAssignment(assignmentId);
+    setDeleteResultDialog({ open: false, assignmentId: null });
+    loadTests();
+    toast({
+      title: 'Результат удален',
+      description: 'История прохождения теста удалена'
+    });
+  };
+
+  const canManageResults = currentUser?.role === 'manager' || currentUser?.role === 'supervisor';
 
   const getStatusBadge = (status: TestAssignment['status']) => {
     switch (status) {
@@ -376,14 +400,36 @@ const TestsTab = ({ currentUser }: TestsTabProps) => {
                             )}
                           </div>
                         </div>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleViewResults(assignment.id)}
-                        >
-                          <Icon name="Eye" size={14} className="mr-1" />
-                          Просмотр
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleViewResults(assignment.id)}
+                          >
+                            <Icon name="Eye" size={14} className="mr-1" />
+                            Просмотр
+                          </Button>
+                          {canManageResults && assignment.status !== 'pending' && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setResetDialog({ open: true, assignmentId: assignment.id })}
+                                title="Обнулить результат"
+                              >
+                                <Icon name="RotateCcw" size={14} />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setDeleteResultDialog({ open: true, assignmentId: assignment.id })}
+                                title="Удалить результат"
+                              >
+                                <Icon name="Trash2" size={14} />
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -431,6 +477,44 @@ const TestsTab = ({ currentUser }: TestsTabProps) => {
           <AlertDialogFooter>
             <AlertDialogCancel>Отмена</AlertDialogCancel>
             <AlertDialogAction onClick={() => deleteDialog.testId && handleDelete(deleteDialog.testId)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Удалить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={resetDialog.open} onOpenChange={(open) => setResetDialog({ open, assignmentId: null })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Обнулить результат теста?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Результаты прохождения теста будут обнулены. Пользователь сможет пройти тест заново. 
+              История прохождения сохранится в системе.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction onClick={() => resetDialog.assignmentId && handleResetResult(resetDialog.assignmentId)}>
+              Обнулить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteResultDialog.open} onOpenChange={(open) => setDeleteResultDialog({ open, assignmentId: null })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить результат теста?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Это действие нельзя отменить. История прохождения теста будет полностью удалена из системы.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => deleteResultDialog.assignmentId && handleDeleteResult(deleteResultDialog.assignmentId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Удалить
             </AlertDialogAction>
           </AlertDialogFooter>
