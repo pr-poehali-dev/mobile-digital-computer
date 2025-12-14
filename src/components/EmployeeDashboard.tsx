@@ -8,6 +8,7 @@ import Icon from '@/components/ui/icon';
 import ProfileDialog from './ProfileDialog';
 import ShiftControls from './ShiftControls';
 import StatisticsTab from './tabs/StatisticsTab';
+import ChangePasswordDialog from './ChangePasswordDialog';
 import { type User } from '@/lib/auth';
 import { getUserCrew, getCrewCalls, updateCrewStatus, isDispatcherOnDuty, getActiveDispatcherShifts, getAvailableCrewMembers, createCrew, deleteCrew, getSystemRestrictions, type Crew, type Call } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
@@ -46,6 +47,7 @@ const getStatusConfig = (status: Crew['status']) => {
 
 const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) => {
   const [profileOpen, setProfileOpen] = useState(false);
+  const [passwordDialog, setPasswordDialog] = useState(false);
   const [activeTab, setActiveTab] = useState<'calls' | 'analytics' | 'logs' | 'statistics'>('logs');
   const [myCrew, setMyCrew] = useState<Crew | null>(null);
   const [myCalls, setMyCalls] = useState<Call[]>([]);
@@ -247,6 +249,10 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
                   <DropdownMenuItem onClick={() => setProfileOpen(true)}>
                     <Icon name="User" size={16} className="mr-2" />
                     Профиль
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setPasswordDialog(true)}>
+                    <Icon name="KeyRound" size={16} className="mr-2" />
+                    Изменить пароль
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onLogout} className="text-destructive">
@@ -556,6 +562,15 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {currentUser && (
+        <ChangePasswordDialog
+          open={passwordDialog}
+          onOpenChange={setPasswordDialog}
+          userId={currentUser.id}
+          userName={currentUser.fullName}
+        />
+      )}
     </div>
   );
 };
