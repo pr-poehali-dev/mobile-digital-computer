@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import LoginPage from '@/components/LoginPage';
+import RegisterPage from '@/components/RegisterPage';
 import Dashboard from '@/components/Dashboard';
 import EmployeeDashboard from '@/components/EmployeeDashboard';
 import { getUserSession, clearUserSession, type User } from '@/lib/auth';
@@ -10,6 +11,7 @@ const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showRegister, setShowRegister] = useState(false);
 
   useEffect(() => {
     const user = getUserSession();
@@ -102,21 +104,17 @@ const Index = () => {
     );
   }
 
-  console.log('[Index] isAuthenticated:', isAuthenticated);
-  console.log('[Index] currentUser:', currentUser);
-  console.log('[Index] currentUser?.role:', currentUser?.role);
-  
   if (!isAuthenticated) {
-    console.log('[Index] Показываю LoginPage');
-    return <LoginPage onLogin={handleLogin} />;
+    if (showRegister) {
+      return <RegisterPage onBackToLogin={() => setShowRegister(false)} />;
+    }
+    return <LoginPage onLogin={handleLogin} onRegister={() => setShowRegister(true)} />;
   }
 
   if (currentUser?.role === 'employee') {
-    console.log('[Index] Показываю EmployeeDashboard');
     return <EmployeeDashboard onLogout={handleLogout} currentUser={currentUser} />;
   }
 
-  console.log('[Index] Показываю Dashboard (dispatcher/admin)');
   return <Dashboard onLogout={handleLogout} currentUser={currentUser} />;
 };
 

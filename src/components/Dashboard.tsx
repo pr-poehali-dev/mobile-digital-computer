@@ -10,6 +10,7 @@ import AnalyticsTab from './tabs/AnalyticsTab';
 import LogTab from './tabs/LogTab';
 import SettingsTab from './tabs/SettingsTab';
 import AccountsTab from './tabs/AccountsTab';
+import PendingUsersTab from './tabs/PendingUsersTab';
 import StatisticsTab from './tabs/StatisticsTab';
 import ShiftControls from './ShiftControls';
 import ProfileDialog from './ProfileDialog';
@@ -193,7 +194,7 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
 
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${canManageAccounts(currentUser) && !mdtSystemDisabled ? 'grid-cols-6' : mdtSystemDisabled ? (survSystemEnabled ? 'grid-cols-4' : 'grid-cols-3') : (survSystemEnabled ? 'grid-cols-6' : 'grid-cols-5')} lg:w-auto lg:inline-grid`}>
+          <TabsList className={`grid w-full ${canManageAccounts(currentUser) && !mdtSystemDisabled ? 'grid-cols-7' : mdtSystemDisabled ? (survSystemEnabled ? 'grid-cols-4' : 'grid-cols-3') : (survSystemEnabled ? 'grid-cols-6' : 'grid-cols-5')} lg:w-auto lg:inline-grid`}>
             {!mdtSystemDisabled && (
               <>
                 <TabsTrigger value="crews" className="space-x-2">
@@ -221,10 +222,16 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
               </TabsTrigger>
             )}
             {canManageAccounts(currentUser) && (
-              <TabsTrigger value="accounts" className="space-x-2">
-                <Icon name="UserCog" size={16} />
-                <span className="hidden sm:inline">Аккаунты</span>
-              </TabsTrigger>
+              <>
+                <TabsTrigger value="accounts" className="space-x-2">
+                  <Icon name="UserCog" size={16} />
+                  <span className="hidden sm:inline">Аккаунты</span>
+                </TabsTrigger>
+                <TabsTrigger value="pending" className="space-x-2">
+                  <Icon name="UserPlus" size={16} />
+                  <span className="hidden sm:inline">Заявки</span>
+                </TabsTrigger>
+              </>
             )}
             <TabsTrigger value="settings" className="space-x-2">
               <Icon name="Settings" size={16} />
@@ -295,9 +302,15 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
           )}
 
           {canManageAccounts(currentUser) && (
-            <TabsContent value="accounts" className="space-y-4">
-              <AccountsTab currentUser={currentUser} />
-            </TabsContent>
+            <>
+              <TabsContent value="accounts" className="space-y-4">
+                <AccountsTab currentUser={currentUser} />
+              </TabsContent>
+              
+              <TabsContent value="pending" className="space-y-4">
+                <PendingUsersTab />
+              </TabsContent>
+            </>
           )}
 
           <TabsContent value="settings" className="space-y-4">

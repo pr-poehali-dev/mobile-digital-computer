@@ -9,9 +9,10 @@ import { authenticate, saveUserSession, type User } from '@/lib/auth';
 
 interface LoginPageProps {
   onLogin: (user: User) => void;
+  onRegister?: () => void;
 }
 
-const LoginPage = ({ onLogin }: LoginPageProps) => {
+const LoginPage = ({ onLogin, onRegister }: LoginPageProps) => {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -102,6 +103,20 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
                 </>
               )}
             </Button>
+
+            {onRegister && (
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full" 
+                size="lg" 
+                onClick={onRegister}
+                disabled={isLoading}
+              >
+                <Icon name="UserPlus" size={18} className="mr-2" />
+                Регистрация
+              </Button>
+            )}
             
             <div className="mt-4 p-3 bg-muted rounded-lg text-xs text-muted-foreground">
               <p className="font-medium mb-1">Тестовые аккаунты:</p>

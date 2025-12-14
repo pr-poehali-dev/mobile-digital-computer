@@ -7,6 +7,8 @@ export interface User {
   frozenBy?: string;
   frozenAt?: string;
   frozenBySystem?: boolean;
+  pendingActivation?: boolean;
+  registeredAt?: string;
 }
 
 const USERS_DB = [
@@ -78,6 +80,10 @@ export const authenticate = async (userId: string, password: string): Promise<{ 
 
   const { password: _, ...userData } = userWithPassword;
   
+  if (userData.pendingActivation) {
+    return {
+      success: false,
+      error: '\u0412\u0430\u0448 \u0430\u043a\u043a\u0430\u0443\u043d\u0442 \u043e\u0436\u0438\u0434\u0430\u0435\u0442 \u0430\u043a\u0442\u0438\u0432\u0430\u0446\u0438\u0438 \u043c\u0435\u043d\u0435\u0434\u0436\u0435\u0440\u043e\u043c. \u041f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430, \u043f\u043e\u0434\u043e\u0436\u0434\u0438\u0442\u0435.'\n    };\n  }\n  
   if (userData.frozen) {
     if (userData.frozenBySystem && userData.role === 'dispatcher') {
       return {
@@ -135,4 +141,75 @@ export const getUserSession = (): User | null => {
 export const clearUserSession = () => {
   localStorage.removeItem('mdc_auth');
   localStorage.removeItem('mdc_user');
+};
+
+interface RegistrationData {
+  email: string;
+  password: string;
+  fullName: string;
+}
+
+export const register = async (data: RegistrationData): Promise<{ success: boolean; error?: string }> => {
+  await new Promise(resolve => setTimeout(resolve, 500));
+
+  const usersData = localStorage.getItem('mdc_users');
+  const users = usersData ? JSON.parse(usersData) : USERS_DB;
+
+  if (users.find((u: any) => u.email.toLowerCase() === data.email.toLowerCase())) {
+    return {
+      success: false,
+      error: 'Пользователь с такой электронной почтой уже существует'
+    };
+  }
+
+  const maxId = Math.max(...users.map((u: any) => parseInt(u.id)));
+  const newId = (maxId + 1).toString();
+
+  const newUser = {
+    id: newId,
+    password: data.password,
+    fullName: data.fullName,
+    email: data.email,
+    role: 'employee' as const,
+    pendingActivation: true,
+    registeredAt: new Date().toISOString()
+  };
+
+  users.push(newUser);
+  localStorage.setItem('mdc_users', JSON.stringify(users));
+
+  return { success: true };
+};
+
+export const getPendingUsers = (): Array<User & { id: string }> => {
+  const usersData = localStorage.getItem('mdc_users');
+  const users = usersData ? JSON.parse(usersData) : [];
+  
+  return users
+    .filter((u: any) => u.pendingActivation)
+    .map(({ password, ...user }: any) => user);
+};
+
+export const activateUser = (userId: string, role: User['role']): boolean => {
+  const usersData = localStorage.getItem('mdc_users');
+  const users = usersData ? JSON.parse(usersData) : [];
+  
+  const userIndex = users.findIndex((u: any) => u.id === userId);
+  if (userIndex === -1) return false;
+  
+  users[userIndex].pendingActivation = false;
+  users[userIndex].role = role;
+  
+  localStorage.setItem('mdc_users', JSON.stringify(users));
+  return true;
+};
+
+export const rejectRegistration = (userId: string): boolean => {
+  const usersData = localStorage.getItem('mdc_users');
+  const users = usersData ? JSON.parse(usersData) : [];
+  
+  const filteredUsers = users.filter((u: any) => u.id !== userId);
+  localStorage.setItem('mdc_users', JSON.stringify(filteredUsers));
+  
+  return true;
 };
