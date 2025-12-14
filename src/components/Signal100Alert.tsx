@@ -44,10 +44,10 @@ const Signal100Alert = ({ currentUser }: Signal100AlertProps) => {
     const now = audioContext.currentTime;
     gainNode.gain.setValueAtTime(0, now);
     gainNode.gain.linearRampToValueAtTime(0.3, now + 0.05);
-    gainNode.gain.setValueAtTime(0.3, now + 3);
+    gainNode.gain.setValueAtTime(0.3, now + 2);
 
     oscillator.start(now);
-    oscillator.stop(now + 3);
+    oscillator.stop(now + 2);
   };
 
   useEffect(() => {
