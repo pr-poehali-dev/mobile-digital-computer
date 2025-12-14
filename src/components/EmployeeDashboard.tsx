@@ -9,6 +9,7 @@ import ProfileDialog from './ProfileDialog';
 import ShiftControls from './ShiftControls';
 import StatisticsTab from './tabs/StatisticsTab';
 import ChangePasswordDialog from './ChangePasswordDialog';
+import MyTestsView from './MyTestsView';
 import { type User } from '@/lib/auth';
 import { getUserCrew, getCrewCalls, updateCrewStatus, isDispatcherOnDuty, getActiveDispatcherShifts, getAvailableCrewMembers, createCrew, deleteCrew, getSystemRestrictions, type Crew, type Call } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
@@ -48,7 +49,7 @@ const getStatusConfig = (status: Crew['status']) => {
 const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) => {
   const [profileOpen, setProfileOpen] = useState(false);
   const [passwordDialog, setPasswordDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState<'calls' | 'analytics' | 'logs' | 'statistics'>('logs');
+  const [activeTab, setActiveTab] = useState<'calls' | 'analytics' | 'logs' | 'statistics' | 'tests'>('logs');
   const [myCrew, setMyCrew] = useState<Crew | null>(null);
   const [myCalls, setMyCalls] = useState<Call[]>([]);
   const [dispatcherOnDuty, setDispatcherOnDuty] = useState(false);
@@ -253,6 +254,10 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
                   <DropdownMenuItem onClick={() => setPasswordDialog(true)}>
                     <Icon name="KeyRound" size={16} className="mr-2" />
                     Изменить пароль
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setActiveTab('tests')}>
+                    <Icon name="FileText" size={16} className="mr-2" />
+                    Мои тесты
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onLogout} className="text-destructive">
@@ -467,7 +472,9 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
                 </Tabs>
               </CardHeader>
               <CardContent>
-                {activeTab === 'statistics' && survSystemEnabled ? (
+                {activeTab === 'tests' ? (
+                  <MyTestsView currentUser={currentUser} />
+                ) : activeTab === 'statistics' && survSystemEnabled ? (
                   <StatisticsTab currentUser={currentUser} canViewAllStats={false} />
                 ) : (
                   <EmployeeTabsContent activeTab={activeTab} myCalls={myCalls} userId={currentUser.id} />

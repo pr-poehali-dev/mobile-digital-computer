@@ -12,6 +12,8 @@ import SettingsTab from './tabs/SettingsTab';
 import AccountsTab from './tabs/AccountsTab';
 import PendingUsersTab from './tabs/PendingUsersTab';
 import StatisticsTab from './tabs/StatisticsTab';
+import TestsTab from './tabs/TestsTab';
+import MyTestsView from './MyTestsView';
 import ShiftControls from './ShiftControls';
 import ProfileDialog from './ProfileDialog';
 import DispatcherPanicAlert from './DispatcherPanicAlert';
@@ -194,7 +196,7 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
 
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${canManageAccounts(currentUser) && !mdtSystemDisabled ? 'grid-cols-7' : mdtSystemDisabled ? (survSystemEnabled ? 'grid-cols-4' : 'grid-cols-3') : (survSystemEnabled ? 'grid-cols-6' : 'grid-cols-5')} lg:w-auto lg:inline-grid`}>
+          <TabsList className={`grid w-full ${canManageAccounts(currentUser) && !mdtSystemDisabled ? 'grid-cols-8' : mdtSystemDisabled ? (survSystemEnabled ? 'grid-cols-5' : 'grid-cols-4') : (survSystemEnabled ? 'grid-cols-6' : 'grid-cols-5')} lg:w-auto lg:inline-grid`}>
             {!mdtSystemDisabled && (
               <>
                 <TabsTrigger value="crews" className="space-x-2">
@@ -221,6 +223,12 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
                 <span className="hidden sm:inline">Статистика</span>
               </TabsTrigger>
             )}
+            <TabsTrigger value="tests" className="space-x-2">
+              <Icon name="FileText" size={16} />
+              <span className="hidden sm:inline">
+                {canManageAccounts(currentUser) ? 'Тесты' : 'Мои тесты'}
+              </span>
+            </TabsTrigger>
             {canManageAccounts(currentUser) && (
               <>
                 <TabsTrigger value="accounts" className="space-x-2">
@@ -312,6 +320,14 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
               </TabsContent>
             </>
           )}
+
+          <TabsContent value="tests" className="space-y-4">
+            {canManageAccounts(currentUser) ? (
+              <TestsTab currentUser={currentUser} />
+            ) : (
+              <MyTestsView currentUser={currentUser} />
+            )}
+          </TabsContent>
 
           <TabsContent value="settings" className="space-y-4">
             <SettingsTab currentUser={currentUser} />

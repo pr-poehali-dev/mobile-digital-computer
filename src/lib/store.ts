@@ -124,6 +124,57 @@ export interface ShiftStatistics {
 }
 
 // ============================================================================
+// TESTING SYSTEM TYPES
+// ============================================================================
+
+export type QuestionType = 'single' | 'multiple' | 'text';
+
+export interface Question {
+  id: string;
+  text: string;
+  type: QuestionType;
+  options?: string[]; // Для single/multiple
+  correctAnswers?: number[]; // Индексы правильных ответов для single/multiple
+  timeLimit?: number; // В секундах, undefined = без ограничения
+  points: number;
+}
+
+export interface Test {
+  id: string;
+  title: string;
+  description: string;
+  questions: Question[];
+  passingScore: number; // Процент для прохождения (0-100)
+  requiresManualCheck: boolean; // true если есть текстовые вопросы
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface TestAssignment {
+  id: string;
+  testId: string;
+  userId: string;
+  assignedBy: string;
+  assignedAt: string;
+  dueDate?: string;
+  status: 'pending' | 'in-progress' | 'completed' | 'passed' | 'failed';
+  startedAt?: string;
+  completedAt?: string;
+  score?: number;
+  answers?: TestAnswer[];
+  reviewedBy?: string;
+  reviewedAt?: string;
+}
+
+export interface TestAnswer {
+  questionId: string;
+  selectedOptions?: number[]; // Для single/multiple
+  textAnswer?: string; // Для text
+  timeSpent: number; // В секундах
+  isCorrect?: boolean; // Для автоматической проверки
+}
+
+// ============================================================================
 // STORAGE KEYS
 // ============================================================================
 
@@ -143,6 +194,8 @@ const KEYS = {
   USER_SETTINGS: 'mdc_user_settings',
   SHIFT_SESSIONS: 'mdc_shift_sessions',
   SHIFT_STATISTICS: 'mdc_shift_statistics',
+  TESTS: 'mdc_tests',
+  TEST_ASSIGNMENTS: 'mdc_test_assignments',
 } as const;
 
 
@@ -1486,6 +1539,196 @@ export const getUserShiftStatistics = (userId: string, startDate: string, endDat
 export const getAllUsersShiftStatistics = (date: string): ShiftStatistics[] => {
   const allStats = storage.get<ShiftStatistics[]>(KEYS.SHIFT_STATISTICS, []);
   return allStats.filter(s => s.date === date);
+};
+
+// ============================================================================
+// TESTING SYSTEM API
+// ============================================================================
+
+export const getAllTests = (): Test[] => {
+  return storage.get<Test[]>(KEYS.TESTS, []);
+};
+
+export const getTestById = (testId: string): Test | null => {
+  const tests = getAllTests();
+  return tests.find(t => t.id === testId) || null;
+};
+
+export const createTest = (test: Omit<Test, 'id' | 'createdAt'>, creatorId: string): Test => {
+  const tests = getAllTests();
+  const newTest: Test = {
+    ...test,
+    id: `TEST-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    createdBy: creatorId,
+    createdAt: new Date().toISOString()
+  };
+  storage.set(KEYS.TESTS, [...tests, newTest]);
+  syncManager.notify('tests_updated');
+  return newTest;
+};
+
+export const updateTest = (testId: string, updates: Partial<Omit<Test, 'id' | 'createdBy' | 'createdAt'>>): boolean => {
+  const tests = getAllTests();
+  const testIndex = tests.findIndex(t => t.id === testId);
+  if (testIndex === -1) return false;
+  
+  tests[testIndex] = { ...tests[testIndex], ...updates };
+  storage.set(KEYS.TESTS, tests);
+  syncManager.notify('tests_updated');
+  return true;
+};
+
+export const deleteTest = (testId: string): boolean => {
+  const tests = getAllTests();
+  const filteredTests = tests.filter(t => t.id !== testId);
+  storage.set(KEYS.TESTS, filteredTests);
+  
+  const assignments = getAllTestAssignments();
+  const filteredAssignments = assignments.filter(a => a.testId !== testId);
+  storage.set(KEYS.TEST_ASSIGNMENTS, filteredAssignments);
+  
+  syncManager.notify('tests_updated');
+  syncManager.notify('test_assignments_updated');
+  return true;
+};
+
+export const getAllTestAssignments = (): TestAssignment[] => {
+  return storage.get<TestAssignment[]>(KEYS.TEST_ASSIGNMENTS, []);
+};
+
+export const getTestAssignmentById = (assignmentId: string): TestAssignment | null => {
+  const assignments = getAllTestAssignments();
+  return assignments.find(a => a.id === assignmentId) || null;
+};
+
+export const getUserTestAssignments = (userId: string): TestAssignment[] => {
+  const assignments = getAllTestAssignments();
+  return assignments.filter(a => a.userId === userId);
+};
+
+export const assignTest = (testId: string, userId: string, assignedBy: string, dueDate?: string): TestAssignment => {
+  const assignments = getAllTestAssignments();
+  const newAssignment: TestAssignment = {
+    id: `ASSIGN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    testId,
+    userId,
+    assignedBy,
+    assignedAt: new Date().toISOString(),
+    dueDate,
+    status: 'pending'
+  };
+  storage.set(KEYS.TEST_ASSIGNMENTS, [...assignments, newAssignment]);
+  syncManager.notify('test_assignments_updated');
+  return newAssignment;
+};
+
+export const startTestAttempt = (assignmentId: string): boolean => {
+  const assignments = getAllTestAssignments();
+  const assignment = assignments.find(a => a.id === assignmentId);
+  if (!assignment || assignment.status !== 'pending') return false;
+  
+  assignment.status = 'in-progress';
+  assignment.startedAt = new Date().toISOString();
+  storage.set(KEYS.TEST_ASSIGNMENTS, assignments);
+  syncManager.notify('test_assignments_updated');
+  return true;
+};
+
+export const submitTestAnswers = (assignmentId: string, answers: TestAnswer[]): boolean => {
+  const assignments = getAllTestAssignments();
+  const assignment = assignments.find(a => a.id === assignmentId);
+  if (!assignment || assignment.status !== 'in-progress') return false;
+  
+  const test = getTestById(assignment.testId);
+  if (!test) return false;
+  
+  let totalPoints = 0;
+  let earnedPoints = 0;
+  let requiresManualReview = false;
+  
+  const processedAnswers = answers.map(answer => {
+    const question = test.questions.find(q => q.id === answer.questionId);
+    if (!question) return answer;
+    
+    totalPoints += question.points;
+    
+    if (question.type === 'text') {
+      requiresManualReview = true;
+      return answer;
+    }
+    
+    if (question.type === 'single' || question.type === 'multiple') {
+      const correctAnswers = question.correctAnswers || [];
+      const selectedOptions = answer.selectedOptions || [];
+      
+      const isCorrect = correctAnswers.length === selectedOptions.length &&
+        correctAnswers.every(ca => selectedOptions.includes(ca));
+      
+      if (isCorrect) {
+        earnedPoints += question.points;
+      }
+      
+      return { ...answer, isCorrect };
+    }
+    
+    return answer;
+  });
+  
+  assignment.answers = processedAnswers;
+  assignment.completedAt = new Date().toISOString();
+  
+  if (requiresManualReview) {
+    assignment.status = 'completed';
+  } else {
+    const score = totalPoints > 0 ? (earnedPoints / totalPoints) * 100 : 0;
+    assignment.score = score;
+    assignment.status = score >= test.passingScore ? 'passed' : 'failed';
+  }
+  
+  storage.set(KEYS.TEST_ASSIGNMENTS, assignments);
+  syncManager.notify('test_assignments_updated');
+  return true;
+};
+
+export const reviewTestManually = (assignmentId: string, score: number, reviewerId: string): boolean => {
+  const assignments = getAllTestAssignments();
+  const assignment = assignments.find(a => a.id === assignmentId);
+  if (!assignment || assignment.status !== 'completed') return false;
+  
+  const test = getTestById(assignment.testId);
+  if (!test) return false;
+  
+  assignment.score = score;
+  assignment.status = score >= test.passingScore ? 'passed' : 'failed';
+  assignment.reviewedBy = reviewerId;
+  assignment.reviewedAt = new Date().toISOString();
+  
+  storage.set(KEYS.TEST_ASSIGNMENTS, assignments);
+  syncManager.notify('test_assignments_updated');
+  return true;
+};
+
+export const deleteTestAssignment = (assignmentId: string): boolean => {
+  const assignments = getAllTestAssignments();
+  const filteredAssignments = assignments.filter(a => a.id !== assignmentId);
+  storage.set(KEYS.TEST_ASSIGNMENTS, filteredAssignments);
+  syncManager.notify('test_assignments_updated');
+  return true;
+};
+
+export const getTestStatistics = (testId: string) => {
+  const assignments = getAllTestAssignments().filter(a => a.testId === testId);
+  
+  return {
+    total: assignments.length,
+    pending: assignments.filter(a => a.status === 'pending').length,
+    inProgress: assignments.filter(a => a.status === 'in-progress').length,
+    completed: assignments.filter(a => a.status === 'completed').length,
+    passed: assignments.filter(a => a.status === 'passed').length,
+    failed: assignments.filter(a => a.status === 'failed').length,
+    averageScore: assignments.filter(a => a.score !== undefined).reduce((acc, a) => acc + (a.score || 0), 0) / 
+      (assignments.filter(a => a.score !== undefined).length || 1)
+  };
 };
 
 // ============================================================================

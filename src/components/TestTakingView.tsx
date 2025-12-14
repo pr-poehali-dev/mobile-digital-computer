@@ -1,0 +1,330 @@
+import { useState, useEffect, useRef } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import Icon from '@/components/ui/icon';
+import { getTestById, startTestAttempt, submitTestAnswers, type TestAssignment, type TestAnswer } from '@/lib/store';
+import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+
+interface TestTakingViewProps {
+  assignment: TestAssignment;
+  onComplete: () => void;
+  onCancel: () => void;
+}
+
+const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProps) => {
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState<TestAnswer[]>([]);
+  const [questionStartTime, setQuestionStartTime] = useState(Date.now());
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [started, setStarted] = useState(false);
+  const [submitDialog, setSubmitDialog] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+
+  const test = getTestById(assignment.testId);
+
+  useEffect(() => {
+    // Защита от копирования
+    const preventCopy = (e: Event) => {
+      e.preventDefault();
+      toast({
+        title: 'Копирование запрещено',
+        description: 'Копирование содержимого теста не разрешено',
+        variant: 'destructive'
+      });
+    };
+
+    const preventContextMenu = (e: Event) => {
+      e.preventDefault();
+    };
+
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('copy', preventCopy);
+      container.addEventListener('cut', preventCopy);
+      container.addEventListener('contextmenu', preventContextMenu);
+
+      // Запрет выделения текста
+      container.style.userSelect = 'none';
+      container.style.webkitUserSelect = 'none';
+
+      return () => {
+        container.removeEventListener('copy', preventCopy);
+        container.removeEventListener('cut', preventCopy);
+        container.removeEventListener('contextmenu', preventContextMenu);
+        container.style.userSelect = '';
+        container.style.webkitUserSelect = '';
+      };
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (!started || !test) return;
+
+    const currentQuestion = test.questions[currentQuestionIndex];
+    if (currentQuestion.timeLimit) {
+      setTimeLeft(currentQuestion.timeLimit);
+
+      const interval = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev === null || prev <= 1) {
+            handleNext();
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [currentQuestionIndex, started, test]);
+
+  if (!test) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center">
+          <p className="text-muted-foreground">Тест не найден</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const currentQuestion = test.questions[currentQuestionIndex];
+  const currentAnswer = answers.find(a => a.questionId === currentQuestion.id);
+
+  const handleStart = () => {
+    startTestAttempt(assignment.id);
+    setStarted(true);
+    setQuestionStartTime(Date.now());
+  };
+
+  const handleAnswer = (value: any) => {
+    const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000);
+    const newAnswer: TestAnswer = {
+      questionId: currentQuestion.id,
+      timeSpent,
+      ...(currentQuestion.type === 'text' ? { textAnswer: value } : { selectedOptions: value })
+    };
+
+    setAnswers(prev => {
+      const filtered = prev.filter(a => a.questionId !== currentQuestion.id);
+      return [...filtered, newAnswer];
+    });
+  };
+
+  const handleNext = () => {
+    if (currentQuestionIndex < test.questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+      setQuestionStartTime(Date.now());
+      setTimeLeft(test.questions[currentQuestionIndex + 1].timeLimit || null);
+    } else {
+      setSubmitDialog(true);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(prev => prev - 1);
+      setQuestionStartTime(Date.now());
+      setTimeLeft(test.questions[currentQuestionIndex - 1].timeLimit || null);
+    }
+  };
+
+  const handleSubmit = () => {
+    submitTestAnswers(assignment.id, answers);
+    toast({
+      title: 'Тест отправлен',
+      description: 'Ваши ответы сохранены и отправлены на проверку'
+    });
+    onComplete();
+  };
+
+  if (!started) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{test.title}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-muted-foreground">{test.description}</p>
+          
+          <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg">
+            <div>
+              <p className="text-sm text-muted-foreground">Вопросов</p>
+              <p className="text-lg font-semibold">{test.questions.length}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Проходной балл</p>
+              <p className="text-lg font-semibold">{test.passingScore}%</p>
+            </div>
+          </div>
+
+          <div className="bg-warning/10 p-4 rounded-lg space-y-2">
+            <p className="font-medium flex items-center gap-2">
+              <Icon name="AlertTriangle" size={16} className="text-warning" />
+              Важно:
+            </p>
+            <ul className="text-sm space-y-1 ml-6 list-disc">
+              <li>Копирование вопросов и ответов запрещено</li>
+              <li>После начала теста нельзя вернуться к экрану выбора</li>
+              <li>Некоторые вопросы могут иметь ограничение по времени</li>
+              <li>Отвечайте внимательно - изменить ответы после отправки невозможно</li>
+            </ul>
+          </div>
+
+          <div className="flex gap-2">
+            <Button onClick={handleStart} className="flex-1">
+              <Icon name="Play" size={16} className="mr-2" />
+              Начать тест
+            </Button>
+            <Button variant="outline" onClick={onCancel}>
+              Отмена
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const progress = ((currentQuestionIndex + 1) / test.questions.length) * 100;
+  const answeredCount = answers.length;
+
+  return (
+    <div ref={containerRef}>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">
+              Вопрос {currentQuestionIndex + 1} из {test.questions.length}
+            </CardTitle>
+            {timeLeft !== null && (
+              <Badge variant={timeLeft < 10 ? 'destructive' : 'secondary'} className="text-lg px-3">
+                <Icon name="Clock" size={14} className="mr-1" />
+                {timeLeft}с
+              </Badge>
+            )}
+          </div>
+          <Progress value={progress} className="h-2" />
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <div className="flex gap-2 items-start">
+              <Badge variant="outline">{currentQuestion.points} балл(ов)</Badge>
+              <Badge variant="outline">
+                {currentQuestion.type === 'single' ? 'Одиночный выбор' : 
+                 currentQuestion.type === 'multiple' ? 'Множественный выбор' : 
+                 'Текстовый ответ'}
+              </Badge>
+            </div>
+
+            <p className="text-lg font-medium">{currentQuestion.text}</p>
+          </div>
+
+          <div className="space-y-3">
+            {currentQuestion.type === 'single' && (
+              <RadioGroup
+                value={currentAnswer?.selectedOptions?.[0]?.toString() || ''}
+                onValueChange={(v) => handleAnswer([parseInt(v)])}
+              >
+                {currentQuestion.options?.map((option, index) => (
+                  <div key={index} className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50">
+                    <RadioGroupItem value={index.toString()} id={`option-${index}`} />
+                    <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
+                      {option}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            )}
+
+            {currentQuestion.type === 'multiple' && (
+              <div className="space-y-2">
+                {currentQuestion.options?.map((option, index) => (
+                  <div key={index} className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50">
+                    <Checkbox
+                      id={`option-${index}`}
+                      checked={currentAnswer?.selectedOptions?.includes(index) || false}
+                      onCheckedChange={(checked) => {
+                        const current = currentAnswer?.selectedOptions || [];
+                        const updated = checked
+                          ? [...current, index]
+                          : current.filter(i => i !== index);
+                        handleAnswer(updated);
+                      }}
+                    />
+                    <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
+                      {option}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {currentQuestion.type === 'text' && (
+              <Textarea
+                placeholder="Введите ваш ответ..."
+                value={currentAnswer?.textAnswer || ''}
+                onChange={(e) => handleAnswer(e.target.value)}
+                rows={6}
+              />
+            )}
+          </div>
+
+          <div className="flex items-center justify-between pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentQuestionIndex === 0}
+            >
+              <Icon name="ChevronLeft" size={16} className="mr-2" />
+              Назад
+            </Button>
+
+            <p className="text-sm text-muted-foreground">
+              Отвечено: {answeredCount} / {test.questions.length}
+            </p>
+
+            {currentQuestionIndex < test.questions.length - 1 ? (
+              <Button onClick={handleNext}>
+                Далее
+                <Icon name="ChevronRight" size={16} className="ml-2" />
+              </Button>
+            ) : (
+              <Button onClick={() => setSubmitDialog(true)}>
+                Завершить тест
+                <Icon name="Check" size={16} className="ml-2" />
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={submitDialog} onOpenChange={setSubmitDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Завершить тест?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Вы ответили на {answeredCount} из {test.questions.length} вопросов.
+              После отправки изменить ответы будет невозможно.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Продолжить тест</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSubmit}>
+              Отправить ответы
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+};
+
+export default TestTakingView;
