@@ -85,7 +85,8 @@ export const authenticate = async (userId: string, password: string): Promise<{ 
       success: false,
       error: 'Ваш аккаунт ожидает активации менеджером. Пожалуйста, подождите.'
     };
-  }\n  
+  }
+  
   if (userData.frozen) {
     if (userData.frozenBySystem && userData.role === 'dispatcher') {
       return {
