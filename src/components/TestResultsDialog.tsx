@@ -173,26 +173,35 @@ const TestResultsDialog = ({ open, onOpenChange, assignmentId, currentUser, canR
                           {question.options?.map((option, optIndex) => {
                             const isSelected = answer.selectedOptions?.includes(optIndex);
                             const isCorrect = question.correctAnswers?.includes(optIndex);
+                            const showCorrectAnswers = test.showAnswers !== 'never' && (canReview || test.showAnswers === 'after-completion');
                             
                             let className = "p-2 rounded border ";
-                            if (isSelected && isCorrect) {
-                              className += "bg-success/10 border-success";
-                            } else if (isSelected && !isCorrect) {
-                              className += "bg-destructive/10 border-destructive";
-                            } else if (!isSelected && isCorrect) {
-                              className += "bg-warning/10 border-warning";
+                            if (showCorrectAnswers) {
+                              if (isSelected && isCorrect) {
+                                className += "bg-success/10 border-success";
+                              } else if (isSelected && !isCorrect) {
+                                className += "bg-destructive/10 border-destructive";
+                              } else if (!isSelected && isCorrect) {
+                                className += "bg-warning/10 border-warning";
+                              }
+                            } else if (isSelected) {
+                              className += "bg-primary/10 border-primary";
                             }
 
                             return (
                               <div key={optIndex} className={className}>
                                 <div className="flex items-center gap-2">
-                                  {isSelected && <Icon name="Check" size={16} className={isCorrect ? "text-success" : "text-destructive"} />}
-                                  {!isSelected && isCorrect && <Icon name="ArrowRight" size={16} className="text-warning" />}
+                                  {showCorrectAnswers && isSelected && <Icon name="Check" size={16} className={isCorrect ? "text-success" : "text-destructive"} />}
+                                  {showCorrectAnswers && !isSelected && isCorrect && <Icon name="ArrowRight" size={16} className="text-warning" />}
+                                  {!showCorrectAnswers && isSelected && <Icon name="Check" size={16} className="text-primary" />}
                                   <span>{option}</span>
                                 </div>
                               </div>
                             );
                           })}
+                          {test.showAnswers === 'never' && !canReview && (
+                            <p className="text-sm text-muted-foreground mt-2">Правильные ответы скрыты</p>
+                          )}
                         </div>
                       )}
                     </div>

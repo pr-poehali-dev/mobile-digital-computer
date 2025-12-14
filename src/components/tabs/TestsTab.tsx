@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
 import { type User } from '@/lib/auth';
-import { getAllTests, getAllTestAssignments, getTestStatistics, deleteTest, type Test, type TestAssignment } from '@/lib/store';
+import { getAllTests, getAllTestAssignments, getTestStatistics, deleteTest, duplicateTest, type Test, type TestAssignment } from '@/lib/store';
 import { useSync } from '@/hooks/use-sync';
 import { useToast } from '@/hooks/use-toast';
 import TestCreatorDialog from '@/components/TestCreatorDialog';
@@ -57,6 +57,18 @@ const TestsTab = ({ currentUser }: TestsTabProps) => {
   const handleEdit = (test: Test) => {
     setEditingTest(test);
     setCreatorOpen(true);
+  };
+
+  const handleDuplicate = (test: Test) => {
+    if (!currentUser) return;
+    const newTest = duplicateTest(test.id, currentUser.id);
+    if (newTest) {
+      toast({
+        title: 'Тест скопирован',
+        description: `Создана копия теста "${test.title}"`
+      });
+      loadTests();
+    }
   };
 
   const myTests = tests.filter(t => t.createdBy === currentUser?.id);
@@ -206,6 +218,14 @@ const TestsTab = ({ currentUser }: TestsTabProps) => {
                           <Icon name="UserPlus" size={14} className="mr-1" />
                           Назначить
                         </Button>
+                        <Button 
+                          onClick={() => handleDuplicate(test)} 
+                          size="sm" 
+                          variant="outline"
+                          title="Дублировать тест"
+                        >
+                          <Icon name="Copy" size={14} />
+                        </Button>
                         {test.createdBy === currentUser?.id && (
                           <>
                             <Button 
@@ -287,6 +307,14 @@ const TestsTab = ({ currentUser }: TestsTabProps) => {
                         >
                           <Icon name="UserPlus" size={14} className="mr-1" />
                           Назначить
+                        </Button>
+                        <Button 
+                          onClick={() => handleDuplicate(test)} 
+                          size="sm" 
+                          variant="outline"
+                          title="Дублировать тест"
+                        >
+                          <Icon name="Copy" size={14} />
                         </Button>
                         {test.createdBy === currentUser?.id && (
                           <>

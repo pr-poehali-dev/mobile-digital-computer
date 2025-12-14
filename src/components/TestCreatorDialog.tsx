@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import Icon from '@/components/ui/icon';
 import { type User } from '@/lib/auth';
-import { createTest, updateTest, type Question, type QuestionType, type Test } from '@/lib/store';
+import { createTest, updateTest, updateTestQuestion, deleteTestQuestion, type Question, type QuestionType, type Test, type ShowAnswersMode } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 
@@ -24,8 +24,9 @@ interface TestCreatorDialogProps {
 
 const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSuccess }: TestCreatorDialogProps) => {
   const [step, setStep] = useState<'info' | 'questions'>('info');
-  const [testInfo, setTestInfo] = useState({ title: '', description: '', passingScore: 70 });
+  const [testInfo, setTestInfo] = useState({ title: '', description: '', passingScore: 70, showAnswers: 'after-completion' as ShowAnswersMode });
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<Partial<Question>>({
     type: 'single',
     points: 1,
@@ -39,7 +40,8 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
       setTestInfo({
         title: editTest.title,
         description: editTest.description,
-        passingScore: editTest.passingScore
+        passingScore: editTest.passingScore,
+        showAnswers: editTest.showAnswers || 'after-completion'
       });
       setQuestions(editTest.questions);
       setStep('info');
@@ -68,34 +70,91 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
       }
     }
 
-    const newQuestion: Question = {
-      id: `Q-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      text: currentQuestion.text!,
-      type: currentQuestion.type as QuestionType,
-      points: currentQuestion.points || 1,
-      timeLimit: currentQuestion.timeLimit,
-      ...(currentQuestion.type !== 'text' && {
-        options: (currentQuestion.options || []).filter(o => o.trim() !== ''),
-        correctAnswers: currentQuestion.correctAnswers
-      })
-    };
+    if (editingQuestionId) {
+      if (editTest) {
+        const updates: Partial<Question> = {
+          text: currentQuestion.text!,
+          type: currentQuestion.type as QuestionType,
+          points: currentQuestion.points || 1,
+          timeLimit: currentQuestion.timeLimit,
+          ...(currentQuestion.type !== 'text' && {
+            options: (currentQuestion.options || []).filter(o => o.trim() !== ''),
+            correctAnswers: currentQuestion.correctAnswers
+          })
+        };
+        updateTestQuestion(editTest.id, editingQuestionId, updates);
+      }
+      setQuestions(questions.map(q => q.id === editingQuestionId ? {
+        ...q,
+        text: currentQuestion.text!,
+        type: currentQuestion.type as QuestionType,
+        points: currentQuestion.points || 1,
+        timeLimit: currentQuestion.timeLimit,
+        ...(currentQuestion.type !== 'text' && {
+          options: (currentQuestion.options || []).filter(o => o.trim() !== ''),
+          correctAnswers: currentQuestion.correctAnswers
+        })
+      } : q));
+      setEditingQuestionId(null);
+      toast({
+        title: 'Вопрос обновлен',
+        description: 'Изменения успешно сохранены'
+      });
+    } else {
+      const newQuestion: Question = {
+        id: `Q-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        text: currentQuestion.text!,
+        type: currentQuestion.type as QuestionType,
+        points: currentQuestion.points || 1,
+        timeLimit: currentQuestion.timeLimit,
+        ...(currentQuestion.type !== 'text' && {
+          options: (currentQuestion.options || []).filter(o => o.trim() !== ''),
+          correctAnswers: currentQuestion.correctAnswers
+        })
+      };
 
-    setQuestions([...questions, newQuestion]);
+      setQuestions([...questions, newQuestion]);
+      toast({
+        title: 'Вопрос добавлен',
+        description: `Вопрос #${questions.length + 1} успешно добавлен`
+      });
+    }
+
     setCurrentQuestion({
       type: 'single',
       points: 1,
       options: ['', ''],
       correctAnswers: []
     });
-
-    toast({
-      title: 'Вопрос добавлен',
-      description: `Вопрос #${questions.length + 1} успешно добавлен`
-    });
   };
 
-  const handleRemoveQuestion = (index: number) => {
-    setQuestions(questions.filter((_, i) => i !== index));
+  const handleRemoveQuestion = (questionId: string) => {
+    if (editTest) {
+      deleteTestQuestion(editTest.id, questionId);
+    }
+    setQuestions(questions.filter(q => q.id !== questionId));
+  };
+
+  const handleEditQuestion = (question: Question) => {
+    setCurrentQuestion({
+      text: question.text,
+      type: question.type,
+      points: question.points,
+      timeLimit: question.timeLimit,
+      options: question.options || ['', ''],
+      correctAnswers: question.correctAnswers || []
+    });
+    setEditingQuestionId(question.id);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingQuestionId(null);
+    setCurrentQuestion({
+      type: 'single',
+      points: 1,
+      options: ['', ''],
+      correctAnswers: []
+    });
   };
 
   const handleCreateTest = () => {
@@ -121,6 +180,7 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
         description: testInfo.description,
         questions,
         passingScore: testInfo.passingScore,
+        showAnswers: testInfo.showAnswers,
         requiresManualCheck
       });
 
@@ -134,6 +194,7 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
         description: testInfo.description,
         questions,
         passingScore: testInfo.passingScore,
+        showAnswers: testInfo.showAnswers,
         requiresManualCheck
       }, currentUser.id);
 
@@ -149,8 +210,9 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
 
   const handleClose = () => {
     setStep('info');
-    setTestInfo({ title: '', description: '', passingScore: 70 });
+    setTestInfo({ title: '', description: '', passingScore: 70, showAnswers: 'after-completion' });
     setQuestions([]);
+    setEditingQuestionId(null);
     setCurrentQuestion({
       type: 'single',
       points: 1,
@@ -227,6 +289,23 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
                 onChange={(e) => setTestInfo({ ...testInfo, passingScore: parseInt(e.target.value) || 0 })}
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="showAnswers">Показ правильных ответов</Label>
+              <Select 
+                value={testInfo.showAnswers} 
+                onValueChange={(v) => setTestInfo({ ...testInfo, showAnswers: v as ShowAnswersMode })}
+              >
+                <SelectTrigger id="showAnswers">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="immediate">Сразу после ответа</SelectItem>
+                  <SelectItem value="after-completion">После прохождения теста</SelectItem>
+                  <SelectItem value="never">Не показывать</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         ) : (
           <div className="space-y-6 py-4">
@@ -247,9 +326,14 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
                             {q.timeLimit && <Badge variant="outline" className="text-xs">{q.timeLimit}с</Badge>}
                           </div>
                         </div>
-                        <Button size="sm" variant="ghost" onClick={() => handleRemoveQuestion(index)}>
-                          <Icon name="X" size={14} />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button size="sm" variant="ghost" onClick={() => handleEditQuestion(q)}>
+                            <Icon name="Pencil" size={14} />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => handleRemoveQuestion(q.id)}>
+                            <Icon name="X" size={14} />
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   ))}
@@ -259,7 +343,15 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Новый вопрос</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">{editingQuestionId ? 'Редактировать вопрос' : 'Новый вопрос'}</CardTitle>
+                  {editingQuestionId && (
+                    <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
+                      <Icon name="X" size={14} className="mr-1" />
+                      Отмена
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -348,8 +440,8 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
                 )}
 
                 <Button onClick={handleAddQuestion} className="w-full">
-                  <Icon name="Plus" size={16} className="mr-2" />
-                  Добавить вопрос
+                  <Icon name={editingQuestionId ? "Check" : "Plus"} size={16} className="mr-2" />
+                  {editingQuestionId ? 'Сохранить изменения' : 'Добавить вопрос'}
                 </Button>
               </CardContent>
             </Card>

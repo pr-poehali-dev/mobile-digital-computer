@@ -139,6 +139,8 @@ export interface Question {
   points: number;
 }
 
+export type ShowAnswersMode = 'immediate' | 'after-completion' | 'never';
+
 export interface Test {
   id: string;
   title: string;
@@ -146,6 +148,7 @@ export interface Test {
   questions: Question[];
   passingScore: number; // Процент для прохождения (0-100)
   requiresManualCheck: boolean; // true если есть текстовые вопросы
+  showAnswers: ShowAnswersMode; // Когда показывать правильные ответы
   createdBy: string;
   createdAt: string;
 }
@@ -1546,12 +1549,21 @@ export const getAllUsersShiftStatistics = (date: string): ShiftStatistics[] => {
 // ============================================================================
 
 export const getAllTests = (): Test[] => {
-  return storage.get<Test[]>(KEYS.TESTS, []);
+  const tests = storage.get<Test[]>(KEYS.TESTS, []);
+  return tests.map(test => ({
+    ...test,
+    showAnswers: test.showAnswers || 'after-completion'
+  }));
 };
 
 export const getTestById = (testId: string): Test | null => {
   const tests = getAllTests();
-  return tests.find(t => t.id === testId) || null;
+  const test = tests.find(t => t.id === testId);
+  if (!test) return null;
+  return {
+    ...test,
+    showAnswers: test.showAnswers || 'after-completion'
+  };
 };
 
 export const createTest = (test: Omit<Test, 'id' | 'createdAt'>, creatorId: string): Test => {
@@ -1567,12 +1579,62 @@ export const createTest = (test: Omit<Test, 'id' | 'createdAt'>, creatorId: stri
   return newTest;
 };
 
+export const duplicateTest = (testId: string, creatorId: string): Test | null => {
+  const tests = getAllTests();
+  const originalTest = tests.find(t => t.id === testId);
+  if (!originalTest) return null;
+
+  const newTest: Test = {
+    ...originalTest,
+    id: `TEST-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    title: `${originalTest.title} (копия)`,
+    createdBy: creatorId,
+    createdAt: new Date().toISOString(),
+    questions: originalTest.questions.map(q => ({
+      ...q,
+      id: `Q-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    }))
+  };
+
+  storage.set(KEYS.TESTS, [...tests, newTest]);
+  syncManager.notify('tests_updated');
+  return newTest;
+};
+
 export const updateTest = (testId: string, updates: Partial<Omit<Test, 'id' | 'createdBy' | 'createdAt'>>): boolean => {
   const tests = getAllTests();
   const testIndex = tests.findIndex(t => t.id === testId);
   if (testIndex === -1) return false;
   
   tests[testIndex] = { ...tests[testIndex], ...updates };
+  storage.set(KEYS.TESTS, tests);
+  syncManager.notify('tests_updated');
+  return true;
+};
+
+export const updateTestQuestion = (testId: string, questionId: string, updates: Partial<Question>): boolean => {
+  const tests = getAllTests();
+  const testIndex = tests.findIndex(t => t.id === testId);
+  if (testIndex === -1) return false;
+  
+  const questionIndex = tests[testIndex].questions.findIndex(q => q.id === questionId);
+  if (questionIndex === -1) return false;
+  
+  tests[testIndex].questions[questionIndex] = {
+    ...tests[testIndex].questions[questionIndex],
+    ...updates
+  };
+  storage.set(KEYS.TESTS, tests);
+  syncManager.notify('tests_updated');
+  return true;
+};
+
+export const deleteTestQuestion = (testId: string, questionId: string): boolean => {
+  const tests = getAllTests();
+  const testIndex = tests.findIndex(t => t.id === testId);
+  if (testIndex === -1) return false;
+  
+  tests[testIndex].questions = tests[testIndex].questions.filter(q => q.id !== questionId);
   storage.set(KEYS.TESTS, tests);
   syncManager.notify('tests_updated');
   return true;
