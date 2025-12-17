@@ -378,15 +378,24 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
             <Button
               variant="outline"
               onClick={handlePrevious}
-              disabled={currentQuestionIndex === 0}
+              disabled={currentQuestionIndex === 0 || !test.allowBackNavigation}
             >
               <Icon name="ChevronLeft" size={16} className="mr-2" />
               Назад
             </Button>
 
-            <p className="text-sm text-muted-foreground">
-              Отвечено: {answeredCount} / {totalQuestions}
-            </p>
+            <div className="flex items-center gap-4">
+              <p className="text-sm text-muted-foreground">
+                Отвечено: {answeredCount} / {totalQuestions}
+              </p>
+              
+              {test.allowQuestionSkip && currentQuestionIndex < totalQuestions - 1 && (
+                <Button variant="ghost" size="sm" onClick={handleNext}>
+                  <Icon name="SkipForward" size={16} className="mr-1" />
+                  Пропустить
+                </Button>
+              )}
+            </div>
 
             {currentQuestionIndex < totalQuestions - 1 ? (
               <Button onClick={handleNext}>

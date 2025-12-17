@@ -32,7 +32,9 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
     showAnswers: 'after-completion' as ShowAnswersMode,
     randomizeQuestions: false,
     randomizeOptions: false,
-    questionBankSize: undefined as number | undefined
+    questionBankSize: undefined as number | undefined,
+    allowBackNavigation: true,
+    allowQuestionSkip: false
   });
   const [questions, setQuestions] = useState<Question[]>([]);
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
@@ -54,7 +56,9 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
         showAnswers: editTest.showAnswers || 'after-completion',
         randomizeQuestions: editTest.randomizeQuestions || false,
         randomizeOptions: editTest.randomizeOptions || false,
-        questionBankSize: editTest.questionBankSize
+        questionBankSize: editTest.questionBankSize,
+        allowBackNavigation: editTest.allowBackNavigation !== undefined ? editTest.allowBackNavigation : true,
+        allowQuestionSkip: editTest.allowQuestionSkip || false
       });
       setQuestions(editTest.questions);
       setStep('info');
@@ -198,7 +202,9 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
         requiresManualCheck,
         randomizeQuestions: testInfo.randomizeQuestions,
         randomizeOptions: testInfo.randomizeOptions,
-        questionBankSize: testInfo.questionBankSize
+        questionBankSize: testInfo.questionBankSize,
+        allowBackNavigation: testInfo.allowBackNavigation,
+        allowQuestionSkip: testInfo.allowQuestionSkip
       });
 
       toast({
@@ -216,7 +222,9 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
         requiresManualCheck,
         randomizeQuestions: testInfo.randomizeQuestions,
         randomizeOptions: testInfo.randomizeOptions,
-        questionBankSize: testInfo.questionBankSize
+        questionBankSize: testInfo.questionBankSize,
+        allowBackNavigation: testInfo.allowBackNavigation,
+        allowQuestionSkip: testInfo.allowQuestionSkip
       }, currentUser.id);
 
       toast({
@@ -239,7 +247,9 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
       showAnswers: 'after-completion',
       randomizeQuestions: false,
       randomizeOptions: false,
-      questionBankSize: undefined
+      questionBankSize: undefined,
+      allowBackNavigation: true,
+      allowQuestionSkip: false
     });
     setQuestions([]);
     setEditingQuestionId(null);
@@ -359,6 +369,35 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
                   <SelectItem value="never">Не показывать</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="border-t pt-4 space-y-4">
+              <h3 className="font-medium flex items-center gap-2">
+                <Icon name="Settings" size={16} />
+                Навигация по тесту
+              </h3>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="allowBackNavigation"
+                  checked={testInfo.allowBackNavigation}
+                  onCheckedChange={(checked) => setTestInfo({ ...testInfo, allowBackNavigation: !!checked })}
+                />
+                <Label htmlFor="allowBackNavigation" className="cursor-pointer">
+                  Разрешить возврат к предыдущим вопросам
+                </Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="allowQuestionSkip"
+                  checked={testInfo.allowQuestionSkip}
+                  onCheckedChange={(checked) => setTestInfo({ ...testInfo, allowQuestionSkip: !!checked })}
+                />
+                <Label htmlFor="allowQuestionSkip" className="cursor-pointer">
+                  Разрешить пропуск вопросов (отложить на потом)
+                </Label>
+              </div>
             </div>
 
             <div className="border-t pt-4 space-y-4">

@@ -155,6 +155,8 @@ export interface Test {
   randomizeQuestions?: boolean; // Рандомизировать порядок вопросов
   randomizeOptions?: boolean; // Рандомизировать порядок вариантов ответов
   questionBankSize?: number; // Размер банка вопросов (если указан, выбирается N случайных из всех)
+  allowBackNavigation?: boolean; // Разрешить возврат к предыдущим вопросам
+  allowQuestionSkip?: boolean; // Разрешить пропуск вопросов
 }
 
 export interface TestAssignment {
