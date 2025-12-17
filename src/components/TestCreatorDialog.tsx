@@ -27,7 +27,8 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
   const [testInfo, setTestInfo] = useState({ 
     title: '', 
     description: '', 
-    passingScore: 70, 
+    passingScore: 70,
+    passingScoreType: 'percentage' as ('percentage' | 'points'),
     showAnswers: 'after-completion' as ShowAnswersMode,
     randomizeQuestions: false,
     randomizeOptions: false,
@@ -49,6 +50,7 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
         title: editTest.title,
         description: editTest.description,
         passingScore: editTest.passingScore,
+        passingScoreType: editTest.passingScoreType || 'percentage',
         showAnswers: editTest.showAnswers || 'after-completion',
         randomizeQuestions: editTest.randomizeQuestions || false,
         randomizeOptions: editTest.randomizeOptions || false,
@@ -191,6 +193,7 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
         description: testInfo.description,
         questions,
         passingScore: testInfo.passingScore,
+        passingScoreType: testInfo.passingScoreType,
         showAnswers: testInfo.showAnswers,
         requiresManualCheck,
         randomizeQuestions: testInfo.randomizeQuestions,
@@ -208,6 +211,7 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
         description: testInfo.description,
         questions,
         passingScore: testInfo.passingScore,
+        passingScoreType: testInfo.passingScoreType,
         showAnswers: testInfo.showAnswers,
         requiresManualCheck,
         randomizeQuestions: testInfo.randomizeQuestions,
@@ -230,7 +234,8 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
     setTestInfo({ 
       title: '', 
       description: '', 
-      passingScore: 70, 
+      passingScore: 70,
+      passingScoreType: 'percentage' as ('percentage' | 'points'),
       showAnswers: 'after-completion',
       randomizeQuestions: false,
       randomizeOptions: false,
@@ -304,15 +309,39 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="passingScore">Проходной балл (%)</Label>
+              <Label htmlFor="passingScoreType">Тип проходного балла</Label>
+              <Select 
+                value={testInfo.passingScoreType} 
+                onValueChange={(v) => setTestInfo({ ...testInfo, passingScoreType: v as ('percentage' | 'points') })}
+              >
+                <SelectTrigger id="passingScoreType">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percentage">Процент (%)</SelectItem>
+                  <SelectItem value="points">Количество баллов</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="passingScore">
+                {testInfo.passingScoreType === 'percentage' ? 'Проходной балл (%)' : 'Проходной балл (баллы)'}
+              </Label>
               <Input
                 id="passingScore"
                 type="number"
                 min="0"
-                max="100"
+                max={testInfo.passingScoreType === 'percentage' ? 100 : undefined}
+                step={testInfo.passingScoreType === 'points' ? '0.1' : '1'}
                 value={testInfo.passingScore}
-                onChange={(e) => setTestInfo({ ...testInfo, passingScore: parseInt(e.target.value) || 0 })}
+                onChange={(e) => setTestInfo({ ...testInfo, passingScore: parseFloat(e.target.value) || 0 })}
               />
+              <p className="text-xs text-muted-foreground">
+                {testInfo.passingScoreType === 'percentage' 
+                  ? 'Процент правильных ответов для прохождения теста (0-100)'
+                  : 'Минимальное количество баллов для прохождения теста'}
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -457,10 +486,14 @@ const TestCreatorDialog = ({ open, onOpenChange, currentUser, editTest, onSucces
                       <Label>Баллы</Label>
                       <Input
                         type="number"
-                        min="1"
+                        min="0"
+                        step="0.1"
                         value={currentQuestion.points}
-                        onChange={(e) => setCurrentQuestion({ ...currentQuestion, points: parseInt(e.target.value) || 1 })}
+                        onChange={(e) => setCurrentQuestion({ ...currentQuestion, points: parseFloat(e.target.value) || 0 })}
                       />
+                      <p className="text-xs text-muted-foreground">
+                        Можно указать дробное число (например, 0.5, 1.5)
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <Label>Время (сек)</Label>

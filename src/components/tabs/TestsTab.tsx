@@ -221,7 +221,7 @@ const TestsTab = ({ currentUser }: TestsTabProps) => {
                         </div>
                         <div>
                           <p className="text-muted-foreground">Проходной балл</p>
-                          <p className="font-semibold">{test.passingScore}%</p>
+                          <p className="font-semibold">{test.passingScoreType === 'percentage' ? `${test.passingScore}%` : `${test.passingScore} баллов`}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Назначено</p>
@@ -311,7 +311,7 @@ const TestsTab = ({ currentUser }: TestsTabProps) => {
                         </div>
                         <div>
                           <p className="text-muted-foreground">Проходной балл</p>
-                          <p className="font-semibold">{test.passingScore}%</p>
+                          <p className="font-semibold">{test.passingScoreType === 'percentage' ? `${test.passingScore}%` : `${test.passingScore} баллов`}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Назначено</p>

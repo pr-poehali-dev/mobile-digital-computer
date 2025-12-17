@@ -136,7 +136,7 @@ export interface Question {
   options?: string[]; // Для single/multiple
   correctAnswers?: number[]; // Индексы правильных ответов для single/multiple
   timeLimit?: number; // В секундах, undefined = без ограничения
-  points: number;
+  points: number; // Может быть дробным числом (например, 0.5, 1.5)
 }
 
 export type ShowAnswersMode = 'immediate' | 'after-completion' | 'never';
@@ -146,7 +146,8 @@ export interface Test {
   title: string;
   description: string;
   questions: Question[];
-  passingScore: number; // Процент для прохождения (0-100)
+  passingScore: number; // Процент для прохождения (0-100) или абсолютное число баллов
+  passingScoreType: 'percentage' | 'points'; // Тип проходного балла
   requiresManualCheck: boolean; // true если есть текстовые вопросы
   showAnswers: ShowAnswersMode; // Когда показывать правильные ответы
   createdBy: string;
@@ -1795,9 +1796,21 @@ export const submitTestAnswers = (assignmentId: string, answers: TestAnswer[]): 
   if (requiresManualReview) {
     assignment.status = 'completed';
   } else {
-    const score = totalPoints > 0 ? (earnedPoints / totalPoints) * 100 : 0;
+    let score: number;
+    let passed: boolean;
+    
+    if (test.passingScoreType === 'points') {
+      // Points mode: use earned points directly
+      score = earnedPoints;
+      passed = earnedPoints >= test.passingScore;
+    } else {
+      // Percentage mode: calculate percentage
+      score = totalPoints > 0 ? (earnedPoints / totalPoints) * 100 : 0;
+      passed = score >= test.passingScore;
+    }
+    
     assignment.score = score;
-    assignment.status = score >= test.passingScore ? 'passed' : 'failed';
+    assignment.status = passed ? 'passed' : 'failed';
   }
   
   storage.set(KEYS.TEST_ASSIGNMENTS, assignments);

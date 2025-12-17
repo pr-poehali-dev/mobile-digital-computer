@@ -249,7 +249,7 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Проходной балл</p>
-              <p className="text-lg font-semibold">{test.passingScore}%</p>
+              <p className="text-lg font-semibold">{test.passingScoreType === 'percentage' ? `${test.passingScore}%` : `${test.passingScore} баллов`}</p>
             </div>
           </div>
 

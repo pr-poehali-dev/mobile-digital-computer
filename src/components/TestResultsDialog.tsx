@@ -44,19 +44,25 @@ const TestResultsDialog = ({ open, onOpenChange, assignmentId, currentUser, canR
     if (!currentUser || !canReview) return;
 
     const score = parseFloat(manualScore);
-    if (isNaN(score) || score < 0 || score > 100) {
+    const totalPoints = test.questions.reduce((sum, q) => sum + q.points, 0);
+    const maxScore = test.passingScoreType === 'points' ? totalPoints : 100;
+    
+    if (isNaN(score) || score < 0 || score > maxScore) {
       toast({
         title: 'Ошибка',
-        description: 'Введите корректный балл от 0 до 100',
+        description: `Введите корректный балл от 0 до ${maxScore}`,
         variant: 'destructive'
       });
       return;
     }
 
     reviewTestManually(assignment.id, score, currentUser.id);
+    const passed = test.passingScoreType === 'points' 
+      ? score >= test.passingScore 
+      : score >= test.passingScore;
     toast({
       title: 'Оценка выставлена',
-      description: `Тест ${score >= test.passingScore ? 'пройден' : 'не пройден'}`
+      description: `Тест ${passed ? 'пройден' : 'не пройден'}`
     });
     onOpenChange(false);
   };

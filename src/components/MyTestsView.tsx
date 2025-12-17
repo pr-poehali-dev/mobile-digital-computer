@@ -88,7 +88,7 @@ const MyTestsView = ({ currentUser }: MyTestsViewProps) => {
             </div>
             <div>
               <p className="text-muted-foreground">Проходной балл</p>
-              <p className="font-semibold">{test.passingScore}%</p>
+              <p className="font-semibold">{test.passingScoreType === 'percentage' ? `${test.passingScore}%` : `${test.passingScore} баллов`}</p>
             </div>
             {assignment.dueDate && (
               <div className="col-span-2">
