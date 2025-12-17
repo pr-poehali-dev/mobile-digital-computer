@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 import LoginPage from "./pages/LoginPage";
 import MdcPage from "./pages/MdcPage";
+import TestsPage from "./pages/TestsPage";
 import NotFound from "./pages/NotFound";
 import { checkInactiveSessions } from "@/lib/store";
 
@@ -31,6 +32,7 @@ const App = () => {
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/mdc" element={<MdcPage />} />
+            <Route path="/tests" element={<TestsPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

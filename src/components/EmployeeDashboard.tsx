@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +10,6 @@ import ProfileDialog from './ProfileDialog';
 import ShiftControls from './ShiftControls';
 import StatisticsTab from './tabs/StatisticsTab';
 import ChangePasswordDialog from './ChangePasswordDialog';
-import MyTestsView from './MyTestsView';
 import { type User } from '@/lib/auth';
 import { getUserCrew, getCrewCalls, updateCrewStatus, isDispatcherOnDuty, getActiveDispatcherShifts, getAvailableCrewMembers, createCrew, deleteCrew, getSystemRestrictions, type Crew, type Call } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
@@ -47,9 +47,10 @@ const getStatusConfig = (status: Crew['status']) => {
 };
 
 const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) => {
+  const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
   const [passwordDialog, setPasswordDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState<'calls' | 'analytics' | 'logs' | 'statistics' | 'tests'>('logs');
+  const [activeTab, setActiveTab] = useState<'calls' | 'analytics' | 'logs' | 'statistics'>('logs');
   const [myCrew, setMyCrew] = useState<Crew | null>(null);
   const [myCalls, setMyCalls] = useState<Call[]>([]);
   const [dispatcherOnDuty, setDispatcherOnDuty] = useState(false);
@@ -233,6 +234,15 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
                   </Badge>
                 </div>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/tests')}
+                className="gap-2"
+              >
+                <Icon name="ClipboardList" className="h-4 w-4" />
+                Мои тесты
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full h-10 w-10">
@@ -254,10 +264,6 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
                   <DropdownMenuItem onClick={() => setPasswordDialog(true)}>
                     <Icon name="KeyRound" size={16} className="mr-2" />
                     Изменить пароль
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setActiveTab('tests')}>
-                    <Icon name="FileText" size={16} className="mr-2" />
-                    Мои тесты
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onLogout} className="text-destructive">
@@ -472,9 +478,7 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
                 </Tabs>
               </CardHeader>
               <CardContent>
-                {activeTab === 'tests' ? (
-                  <MyTestsView currentUser={currentUser} />
-                ) : activeTab === 'statistics' && survSystemEnabled ? (
+                {activeTab === 'statistics' && survSystemEnabled ? (
                   <StatisticsTab currentUser={currentUser} canViewAllStats={false} />
                 ) : (
                   <EmployeeTabsContent activeTab={activeTab} myCalls={myCalls} userId={currentUser.id} />
