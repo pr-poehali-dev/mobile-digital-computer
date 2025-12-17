@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { changeUserPassword } from '@/lib/store';
+import { changeUserPassword, verifyPassword } from '@/lib/store';
 import Icon from '@/components/ui/icon';
 
 interface ChangePasswordDialogProps {
@@ -18,6 +18,7 @@ interface ChangePasswordDialogProps {
 const ChangePasswordDialog = ({ open, onOpenChange, userId, userName, user }: ChangePasswordDialogProps) => {
   const targetUserId = userId || user?.id || '';
   const targetUserName = userName || user?.fullName || '';
+  const [currentPassword, setCurrentPassword] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -26,10 +27,19 @@ const ChangePasswordDialog = ({ open, onOpenChange, userId, userName, user }: Ch
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!currentPassword) {
+      toast({
+        title: 'Ошибка валидации',
+        description: 'Введите текущий пароль',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     if (password.length < 6) {
       toast({
         title: 'Ошибка валидации',
-        description: 'Пароль должен содержать минимум 6 символов',
+        description: 'Новый пароль должен содержать минимум 6 символов',
         variant: 'destructive'
       });
       return;
@@ -47,6 +57,18 @@ const ChangePasswordDialog = ({ open, onOpenChange, userId, userName, user }: Ch
     setIsLoading(true);
 
     try {
+      const isCurrentPasswordValid = await verifyPassword(targetUserId, currentPassword);
+      
+      if (!isCurrentPasswordValid) {
+        toast({
+          title: 'Ошибка',
+          description: 'Неверный текущий пароль',
+          variant: 'destructive'
+        });
+        setIsLoading(false);
+        return;
+      }
+
       const success = await changeUserPassword(targetUserId, password);
 
       if (success) {
@@ -54,6 +76,7 @@ const ChangePasswordDialog = ({ open, onOpenChange, userId, userName, user }: Ch
           title: 'Пароль изменен',
           description: `Пароль для ${targetUserName} успешно обновлен`
         });
+        setCurrentPassword('');
         setPassword('');
         setConfirmPassword('');
         onOpenChange(false);
@@ -76,6 +99,7 @@ const ChangePasswordDialog = ({ open, onOpenChange, userId, userName, user }: Ch
   };
 
   const handleClose = () => {
+    setCurrentPassword('');
     setPassword('');
     setConfirmPassword('');
     onOpenChange(false);
@@ -95,6 +119,18 @@ const ChangePasswordDialog = ({ open, onOpenChange, userId, userName, user }: Ch
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="currentPassword">Текущий пароль</Label>
+              <Input
+                id="currentPassword"
+                type="password"
+                placeholder="Введите текущий пароль"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                disabled={isLoading}
+                required
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="password">Новый пароль</Label>
               <Input

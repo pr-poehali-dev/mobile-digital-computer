@@ -545,6 +545,17 @@ export const changeUserId = (oldUserId: string, newUserId: string): boolean => {
   return true;
 };
 
+export const verifyPassword = async (userId: string, password: string): Promise<boolean> => {
+  const bcrypt = (await import('bcryptjs')).default;
+  const passwordsData = localStorage.getItem(KEYS.USERS_PASSWORDS);
+  const users = passwordsData ? JSON.parse(passwordsData) : [];
+  
+  const user = users.find((u: any) => u.id === userId);
+  if (!user) return false;
+  
+  return await bcrypt.compare(password, user.passwordHash);
+};
+
 export const changeUserPassword = async (userId: string, newPassword: string): Promise<boolean> => {
   const bcrypt = (await import('bcryptjs')).default;
   const passwordsData = localStorage.getItem(KEYS.USERS_PASSWORDS);
