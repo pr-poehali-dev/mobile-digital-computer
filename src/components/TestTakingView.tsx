@@ -158,7 +158,14 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
       const interval = setInterval(() => {
         setTimeLeft(prev => {
           if (prev === null || prev <= 1) {
-            handleNext();
+            clearInterval(interval);
+            const questions = orderedQuestions;
+            if (currentQuestionIndex < questions.length - 1) {
+              setCurrentQuestionIndex(prevIndex => prevIndex + 1);
+              setQuestionStartTime(Date.now());
+            } else {
+              setSubmitDialog(true);
+            }
             return null;
           }
           return prev - 1;
@@ -166,6 +173,8 @@ const TestTakingView = ({ assignment, onComplete, onCancel }: TestTakingViewProp
       }, 1000);
 
       return () => clearInterval(interval);
+    } else {
+      setTimeLeft(null);
     }
   }, [currentQuestionIndex, started, test, orderedQuestions]);
 
