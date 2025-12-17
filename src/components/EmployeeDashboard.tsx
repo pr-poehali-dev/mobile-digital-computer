@@ -49,7 +49,6 @@ const getStatusConfig = (status: Crew['status']) => {
 const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) => {
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
-  const [passwordDialog, setPasswordDialog] = useState(false);
   const [activeTab, setActiveTab] = useState<'calls' | 'analytics' | 'logs' | 'statistics'>('logs');
   const [myCrew, setMyCrew] = useState<Crew | null>(null);
   const [myCalls, setMyCalls] = useState<Call[]>([]);
@@ -234,15 +233,6 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
                   </Badge>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/tests')}
-                className="gap-2"
-              >
-                <Icon name="ClipboardList" className="h-4 w-4" />
-                Мои тесты
-              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full h-10 w-10">
@@ -261,9 +251,9 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
                     <Icon name="User" size={16} className="mr-2" />
                     Профиль
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setPasswordDialog(true)}>
-                    <Icon name="KeyRound" size={16} className="mr-2" />
-                    Изменить пароль
+                  <DropdownMenuItem onClick={() => navigate('/tests')}>
+                    <Icon name="ClipboardList" size={16} className="mr-2" />
+                    Мои тесты
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onLogout} className="text-destructive">
@@ -573,15 +563,6 @@ const EmployeeDashboard = ({ onLogout, currentUser }: EmployeeDashboardProps) =>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {currentUser && (
-        <ChangePasswordDialog
-          open={passwordDialog}
-          onOpenChange={setPasswordDialog}
-          userId={currentUser.id}
-          userName={currentUser.fullName}
-        />
-      )}
     </div>
   );
 };

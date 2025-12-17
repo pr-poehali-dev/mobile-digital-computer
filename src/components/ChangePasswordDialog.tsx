@@ -10,11 +10,14 @@ import Icon from '@/components/ui/icon';
 interface ChangePasswordDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  userId: string;
-  userName: string;
+  userId?: string;
+  userName?: string;
+  user?: { id: string; fullName: string };
 }
 
-const ChangePasswordDialog = ({ open, onOpenChange, userId, userName }: ChangePasswordDialogProps) => {
+const ChangePasswordDialog = ({ open, onOpenChange, userId, userName, user }: ChangePasswordDialogProps) => {
+  const targetUserId = userId || user?.id || '';
+  const targetUserName = userName || user?.fullName || '';
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -44,12 +47,12 @@ const ChangePasswordDialog = ({ open, onOpenChange, userId, userName }: ChangePa
     setIsLoading(true);
 
     try {
-      const success = await changeUserPassword(userId, password);
+      const success = await changeUserPassword(targetUserId, password);
 
       if (success) {
         toast({
           title: 'Пароль изменен',
-          description: `Пароль для ${userName} успешно обновлен`
+          description: `Пароль для ${targetUserName} успешно обновлен`
         });
         setPassword('');
         setConfirmPassword('');
@@ -87,7 +90,7 @@ const ChangePasswordDialog = ({ open, onOpenChange, userId, userName }: ChangePa
             Изменить пароль
           </DialogTitle>
           <DialogDescription>
-            Изменение пароля для пользователя: <strong>{userName}</strong> (ID: {userId})
+            Изменение пароля для пользователя: <strong>{targetUserName}</strong> (ID: {targetUserId})
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
