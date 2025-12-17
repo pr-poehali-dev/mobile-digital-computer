@@ -196,7 +196,7 @@ const Dashboard = ({ onLogout, currentUser }: DashboardProps) => {
 
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${canManageAccounts(currentUser) && !mdtSystemDisabled ? 'grid-cols-8' : mdtSystemDisabled ? (survSystemEnabled ? 'grid-cols-5' : 'grid-cols-4') : (survSystemEnabled ? 'grid-cols-6' : 'grid-cols-5')} lg:w-auto lg:inline-grid`}>
+          <TabsList className="flex flex-wrap w-full justify-start gap-1">
             {!mdtSystemDisabled && (
               <>
                 <TabsTrigger value="crews" className="space-x-2">
