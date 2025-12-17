@@ -12,7 +12,7 @@ const LoginPage = () => {
   useEffect(() => {
     const user = getUserSession();
     if (user && typeof user.id === 'string') {
-      navigate(user.role === 'employee' ? '/tests' : '/mdc');
+      navigate('/mdc');
     }
   }, [navigate]);
 
@@ -26,11 +26,7 @@ const LoginPage = () => {
       details: `Роль: ${user.role}`
     });
     
-    if (user.role === 'employee') {
-      navigate('/tests');
-    } else {
-      navigate('/mdc');
-    }
+    navigate('/mdc');
   };
 
   if (showRegister) {

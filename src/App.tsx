@@ -6,7 +6,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 import LoginPage from "./pages/LoginPage";
-import TestsPage from "./pages/TestsPage";
 import MdcPage from "./pages/MdcPage";
 import NotFound from "./pages/NotFound";
 import { checkInactiveSessions } from "@/lib/store";
@@ -31,7 +30,6 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/tests" element={<TestsPage />} />
             <Route path="/mdc" element={<MdcPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

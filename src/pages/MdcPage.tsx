@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Dashboard from '@/components/Dashboard';
+import EmployeeDashboard from '@/components/EmployeeDashboard';
 import { getUserSession, clearUserSession, type User } from '@/lib/auth';
 import { addOnlineUser, removeOnlineUser } from '@/lib/store';
 import { syncManager } from '@/lib/sync-manager';
@@ -13,11 +14,6 @@ const MdcPage = () => {
     if (!currentUser || typeof currentUser.id !== 'string') {
       clearUserSession();
       navigate('/login');
-      return;
-    }
-
-    if (currentUser.role === 'employee') {
-      navigate('/tests');
       return;
     }
 
@@ -71,6 +67,10 @@ const MdcPage = () => {
 
   if (!currentUser) {
     return null;
+  }
+
+  if (currentUser.role === 'employee') {
+    return <EmployeeDashboard onLogout={handleLogout} currentUser={currentUser} />;
   }
 
   return <Dashboard onLogout={handleLogout} currentUser={currentUser} />;
