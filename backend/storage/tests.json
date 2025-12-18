@@ -1,0 +1,30 @@
+{
+  "tests": [
+    {
+      "name": "Сохранение и получение данных",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "key": "test_key",
+        "value": {"data": "test_value"}
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true,
+        "key": "test_key"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Получение сохраненных данных",
+      "method": "GET",
+      "path": "/?key=test_key",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "key": "test_key",
+        "value": {"data": "test_value"}
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

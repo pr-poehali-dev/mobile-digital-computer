@@ -1,6 +1,8 @@
 import { type User } from './auth';
 import { syncManager } from './sync-manager';
 import { sanitizeText, sanitizeName, sanitizeAddress, sanitizeEmail, sanitizeId } from './sanitize';
+import { STORAGE_TYPE } from './config';
+import { storageAdapter } from './db-adapter';
 
 // ============================================================================
 // TYPES
@@ -218,6 +220,17 @@ const KEYS = {
 
 const storage = {
   get<T>(key: string, defaultValue: T): T {
+    if (STORAGE_TYPE === 'database') {
+      console.warn(`[Storage] Синхронный вызов get() для БД невозможен, используем localStorage как fallback для ключа: ${key}`);
+      const stored = localStorage.getItem(key);
+      if (!stored) return defaultValue;
+      try {
+        return JSON.parse(stored);
+      } catch {
+        return defaultValue;
+      }
+    }
+    
     const stored = localStorage.getItem(key);
     if (!stored) return defaultValue;
     try {
@@ -228,7 +241,11 @@ const storage = {
   },
 
   set(key: string, value: any): void {
-    localStorage.setItem(key, JSON.stringify(value));
+    if (STORAGE_TYPE === 'database') {
+      storageAdapter.set(key, value);
+    } else {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
     
     // Уведомляем другие вкладки через syncManager
     const eventMap: Record<string, any> = {
